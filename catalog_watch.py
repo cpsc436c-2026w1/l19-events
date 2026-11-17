@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import sys
 
+from pydantic import ValidationError
+
+from inputs import CatalogEvent, problems
 from local import LocalCatalog, manifest
 from results import CatalogResult
 
@@ -66,6 +69,10 @@ def _watch(name: str, database: str = "") -> CatalogResult:
 
 
 def handler(event: dict, context=None) -> list[dict]:
+    try:
+        CatalogEvent.model_validate(event)                           # the boundary
+    except ValidationError as e:
+        raise ValueError("not a Glue Data Catalog event: " + "; ".join(problems(e))) from None
     d = event["detail"]
     if d["typeOfChange"].endswith("Partition"):                      # partitions do not change the columns
         return [CatalogResult(table=d["tableName"], stored_version=None, current_version=None, actions=["record"],

@@ -61,6 +61,13 @@ Feature: A table I query changes
     Then the drafter made 3 model calls
     And a draft for column "on_promotion" is in the pending folder with status "cannot_describe"
 
+  @R070
+  Scenario: An event that does not fit the event model is refused with the field named
+    Given the simulator delivers the catalog events of the case "new-column"
+    And the first event has the operation "RenameTable"
+    When the catalog watch runs on each event
+    Then the watch refuses the event and names the field "detail.typeOfChange"
+
   @R050
   Scenario: Events that arrive twice and out of order end with the current definition
     Given the simulator delivers the catalog events of the case "repeated-event"

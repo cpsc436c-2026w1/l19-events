@@ -384,6 +384,27 @@ def build_price_updates(base: dict) -> list[dict]:
         "state": {}, "shardId": "shardId-00000001730365200000-a1b2c3d4", "eventSourceARN": STREAM_ARN,
         "isFinalInvokeForWindow": False, "isWindowTerminatedEarly": False})
 
+    # three records that do not fit the input model, and one batch that holds one of them
+    def broken(i: int, n: int, change) -> dict:
+        r = json.loads(json.dumps(records[i]))
+        seq = f"{4_100_000_000_000_000_000_000 + n * 100:d}"
+        r["eventID"], r["dynamodb"]["SequenceNumber"] = md5(seq), seq
+        r["dynamodb"]["NewImage"]["update_id"] = {"S": f"bad-{n:05d}"}
+        change(r["dynamodb"]["NewImage"])
+        return r
+    w5 = [i for i, u in enumerate(updates) if 5 * 60 <= u[0] < 10 * 60][:7]      # seven good records of the 09:05 window
+    invalid = [broken(w5[0], 1, lambda img: img.pop("price")),
+               broken(w5[1], 2, lambda img: img.update(price={"S": "four dollars"})),
+               broken(w5[2], 3, lambda img: img.update(store={"S": "south"}))]
+    (folder / "invalid-records.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in invalid))
+    batch = [records[i] for i in w5]
+    batch.insert(5, invalid[0])                                                    # the sixth of eight records
+    dump(folder / "failing-batch.json", {
+        "Records": batch, "window": {"start": iso(HOUR_START + timedelta(seconds=300)),
+                                     "end": iso(HOUR_START + timedelta(seconds=600))},
+        "state": {}, "shardId": "shardId-00000001730365200000-a1b2c3d4", "eventSourceARN": STREAM_ARN,
+        "isFinalInvokeForWindow": False, "isWindowTerminatedEarly": False})
+
     files = [rel(folder / "records.jsonl"), rel(folder / "truth.json")]
     n_normal = kinds.count("normal") + kinds.count("held")
     burst_end = iso(HOUR_START + timedelta(seconds=BURST[1] + BURST[2]))
@@ -397,9 +418,20 @@ def build_price_updates(base: dict) -> list[dict]:
         "store-burst": (True, f"{BURST[2]} updates of store north from 09:20:00 to {burst_end[11:19]}, each price 10 % lower."),
         "quiet-windows": (True, "No update from any store from 09:40 to 09:50: two windows without records."),
     }
-    return [{"id": cid, "kind": "price-updates", "planted": p, "what": w, "files": files,
-             "facts": {"event_ids": planted.get(cid, []), "records": len(planted.get(cid, [])) or
-                       (n_normal if cid == "normal-update" else 0)}} for cid, (p, w) in what.items()]
+    out = [{"id": cid, "kind": "price-updates", "planted": p, "what": w, "files": files,
+            "facts": {"event_ids": planted.get(cid, []), "records": len(planted.get(cid, [])) or
+                      (n_normal if cid == "normal-update" else 0)}} for cid, (p, w) in what.items()]
+    out.append({"id": "invalid-update", "kind": "price-updates", "planted": True,
+                "what": "Three records that do not fit the input model: a missing price, a price as text, an unknown store.",
+                "files": [rel(folder / "invalid-records.jsonl")],
+                "facts": {"event_ids": [r["eventID"] for r in invalid], "records": 3,
+                          "fields": ["price", "price", "store"]}})
+    out.append({"id": "failing-batch", "kind": "price-updates", "planted": True,
+                "what": "One batch of 8 records for the 09:05 window; the sixth lacks a price, so a function that "
+                        "does not check its input raises on it.",
+                "files": [rel(folder / "failing-batch.json")],
+                "facts": {"event_ids": [invalid[0]["eventID"]], "records": 8, "bad_position": 6}})
+    return out
 
 
 # ---- kind c: catalog changes --------------------------------------------------------------------------------
@@ -579,9 +611,10 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 
 def write_readme(cases: list[dict], truth: dict) -> None:
     where = {"price-updates": "`price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids`",
+             "invalid-update": "`price-updates/invalid-records.jsonl`", "failing-batch": "`price-updates/failing-batch.json`",
              "batch-files": "`batch-files/{id}/`", "catalog-changes": "`catalog-changes/{id}/`"}
     rows = "\n".join(f"| `{c['id']}` | {c['kind']} | {'planted' if c['planted'] else 'normal'} | {c['what']} | "
-                     f"{where[c['kind']].format(id=c['id'])} |" for c in cases)
+                     f"{where.get(c['id'], where[c['kind']]).format(id=c['id'])} |" for c in cases)
     n = lambda k: sum(c["kind"] == k for c in cases)   # noqa: E731
     (OUT / "README.md").write_text(README_HEAD.format(
         seed=SEED, products=PRODUCTS, job=JOB, day=DAY, rows=rows, n_a=n("price-updates"), n_b=n("batch-files"),

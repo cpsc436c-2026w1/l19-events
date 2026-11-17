@@ -18,6 +18,9 @@ import io
 import statistics
 import sys
 
+from pydantic import ValidationError
+
+from inputs import BatchRow, problems
 from local import LocalLake, manifest, object_key
 from results import FIXES, FileFacts, FileVerdict, MissingVerdict
 
@@ -32,6 +35,17 @@ def read_rows(data: bytes) -> list[dict]:
     return list(csv.DictReader(io.StringIO(data.decode())))
 
 
+def invalid_rows(rows: list[dict]) -> list[str]:
+    """One line per row that does not fit BatchRow: the row's number in the file and the field."""
+    out = []
+    for n, row in enumerate(rows, start=2):               # line 1 is the header
+        try:
+            BatchRow.model_validate(row)
+        except ValidationError as e:
+            out.append(f"line {n}: {'; '.join(problems(e))}")
+    return out
+
+
 def facts_of(rows: list[dict], size: int, arrived_at: str) -> FileFacts:
     ids = [r["obs_id"] for r in rows]
     # each price converted by its own row's currency label, as the job converts it
@@ -44,12 +58,16 @@ def facts_of(rows: list[dict], size: int, arrived_at: str) -> FileFacts:
 def check(key: str, data: bytes, arrived_at: str, usual: dict, job_started_at: str) -> FileVerdict:
     """The runbook for one file. The first rule that fires names the cause."""
     store, day = key.rsplit("/", 1)[1].split("-export")[0], key.split("day=")[1].split("/")[0]
-    f = facts_of(read_rows(data), len(data), arrived_at)
+    rows = read_rows(data)
+    f = facts_of(rows, len(data), arrived_at) if not invalid_rows(rows) else FileFacts(
+        rows=len(rows), products=0, repeated_obs_ids=0, avg_price_cad=0, currencies=[], size=len(data), arrived_at=arrived_at)
 
     def verdict(v, cause, reasons, approval=False):
         return FileVerdict(key=key, store=store, day=day, verdict=v, cause=cause, fix=FIXES[cause] if cause else None,
                            needs_approval=approval, reasons=reasons, facts=f)
 
+    if invalid_rows(rows):                                # the boundary: a row that does not fit the model holds the file
+        return verdict("hold", "other", invalid_rows(rows)[:3])
     rows_off = abs(f.rows / usual["rows"] - 1) > ROWS_TOLERANCE
     price_ratio = f.avg_price_cad / usual["avg_price_cad"]
     if f.repeated_obs_ids:

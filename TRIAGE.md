@@ -28,6 +28,8 @@ The lens column says how often the reaction runs: every request, every row or ru
 | `eur-update` | Keep the update out of the average, write it to a rejected list with its `eventID`, raise an alert for store online. | code | The table holds CAD only; `currency != "CAD"` is one comparison. Converting it in the handler would hide a fault in the writer. | every row or run | `stream_window.py` |
 | `store-burst` | Count all 120 updates; flag the window when a store's count is more than 3 times its median window. A person reads the flag. | code | Counting does not change with the rate. Whether the burst is a planned promotion is not in any data the handler can read, so a model could not read more than the person does. | every row or run | `stream_window.py` |
 | `quiet-windows` | Report a window without updates as a count of 0, from a check on a schedule that looks for the stored number of each window. | code | Without records there may be no invocation to react to (not checked in the documentation), so the rule reads the stored windows on a timer, not the stream. | every row or run | `stream_window.py` (`final_numbers`) |
+| `invalid-update` | Reject the update with a reason that names the field (`price`, `store`); count the other updates. | code | The input model says what an update is; a record that does not fit fails at the boundary, before any arithmetic. | every row or run | `inputs.py`, `stream_window.py` |
+| `failing-batch` | Lambda splits the failed batch in two until the bad record is alone, sends its sequence number to the on-failure destination, and the other 7 are applied once. | code | Settings of the event source mapping (`BisectBatchOnFunctionError`, `MaximumRetryAttempts`, an on-failure destination); the window's state and the duplicate check keep the count right. With the input check the batch does not fail at all. | every row or run | `failing_batch.py` (Lambda's part simulated locally) |
 
 ## Batch files (S3 event for a new export in `prices_raw/day=2026-10-31/`)
 
@@ -65,12 +67,12 @@ definition and compares it with the last one it stored; it never acts on the eve
 
 | Kind | Cases | Code | Agent |
 |---|---|---|---|
-| Price updates | 6 | 6 | 0 |
+| Price updates | 8 | 8 | 0 |
 | Batch files | 7 | 5 | 2 |
 | Catalog changes | 8 | 7 | 1 |
-| All | 21 | 18 | 3 |
+| All | 23 | 20 | 3 |
 
-Lens: 20 cases run on every row or run and 1 once at build time. No case sits under every request (no person
+Lens: 22 cases run on every row or run and 1 once at build time. No case sits under every request (no person
 is waiting for a reply). No case sits under every build: that column holds the tests, run before a merge (the behave
 scenarios in `features/`, and the eval of the agent with `gate.py`).
 
@@ -92,7 +94,7 @@ rules above. `half-file` and `category-missing` are two examples of it.
 `partial_file` and `category_missing` are in the fixed list because a person on call would name them ("the file
 is cut off", "the export dropped a category"). The two planted cases have different causes, so an agent that
 always names the same cause is right on one of two. `new-column` keeps the verdict "agent" in the table above
-although it is built as one checked model call: the real split is 18 code, 2 agent cases, 1 checked model call.
+although it is built as one checked model call: the real split is 20 code, 2 agent cases, 1 checked model call.
 
 Two live evals on the course LLM gateway, 2026-11-17, `qwen3.8-27b`, both planted cases, cause scored in code:
 

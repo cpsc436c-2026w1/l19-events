@@ -259,7 +259,11 @@ def step_catalog(context, case):
 
 @when("the catalog watch runs on each event")
 def step_watch(context):
-    context.results = [r for e in context.catalog.events() for r in catalog_watch.handler(e)]
+    context.refused = None
+    try:
+        context.results = [r for e in context.catalog.events() for r in catalog_watch.handler(e)]
+    except ValueError as e:
+        context.refused = str(e)
 
 
 @when("the daily check runs")
@@ -337,3 +341,168 @@ def step_draft_calls(context, n):
 @then("the second user message carries the check's feedback")
 def step_feedback(context):
     assert "It was rejected:" in context.calls[1] and "rejected" not in context.calls[0]
+
+
+# ---- part 1: input models, failing batch, replay, load ------------------------------------------------------
+
+import asyncio  # noqa: E402
+
+import failing_batch  # noqa: E402
+import load  # noqa: E402
+import replay  # noqa: E402
+
+FAULTS = {"a missing price": 0, "a price as text": 1, "an unknown store": 2}
+
+
+@given("the simulator plants an update with {fault}")
+def step_invalid(context, fault):
+    lines = (EVENTS / "price-updates" / "invalid-records.jsonl").read_text().splitlines()
+    context.bad = json.loads(lines[FAULTS[fault]])
+
+
+@when("the window function receives it")
+def step_receive(context):
+    stream_window.SINK = context.sink = stream_window.Sink()
+    event = json.loads((EVENTS / "price-updates" / "window-event.json").read_text())
+    try:
+        context.out, context.raised = stream_window.handler({**event, "Records": [context.bad]}), None
+    except Exception as e:
+        context.raised = e
+
+
+@then('the update is in the rejected list and the reason names the field "{field}"')
+def step_rejected_field(context, field):
+    (r,) = context.sink.rejected.values()
+    assert r.event_id == context.bad["eventID"] and r.reason.startswith(f"{field}: "), r
+
+
+@then("the window function does not fail")
+def step_no_raise(context):
+    assert context.raised is None and context.out["batchItemFailures"] == []
+
+
+@given("the simulator plants a batch of 8 updates whose sixth lacks a price")
+def step_failing_batch(context):
+    event = json.loads(failing_batch.EVENT.read_text())
+    assert len(event["Records"]) == 8 and "price" not in event["Records"][5]["dynamodb"]["NewImage"]
+    context.validate = True
+
+
+@given("the window function does not check its input")
+def step_unvalidated(context):
+    context.validate = False
+
+
+@when("Lambda delivers the batch, splits it on an error and sends a failed record aside")
+def step_bisect(context):
+    context.report = failing_batch.run(validate=context.validate)
+
+
+@then("{n:d} updates are applied once")
+def step_applied(context, n):
+    assert context.report.applied == n, context.report
+
+
+@then("{n:d} record is in the failure list, with its sequence number and without its content")
+def step_failure_list(context, n):
+    f = context.report.failures
+    assert len(f) == n and f[0]["startSequenceNumber"].isdigit() and "NewImage" not in json.dumps(f)
+
+
+@then("{n:d} records are in the failure list")
+def step_failures(context, n):
+    assert len(context.report.failures) == n
+
+
+@then("delivering the batch again counts {n:d} updates twice")
+def step_twice(context, n):
+    assert context.report.counted_twice == n
+
+
+@given("the window function does not skip an update it has seen")
+def step_no_dedupe(context):
+    context.dedupe = False
+
+
+@when("the window numbers are rebuilt from the start of the stream")
+def step_replay(context):
+    context.replay = replay.run(dedupe=getattr(context, "dedupe", True))
+
+
+@then("the replayed numbers equal the stored numbers")
+def step_replay_equal(context):
+    assert context.replay.equal, context.replay.differences
+
+
+@then("the replayed numbers differ from the stored numbers in window {hhmm} only")
+def step_replay_differs(context, hhmm):
+    assert {d["window"][11:16] for d in context.replay.differences} == {hhmm}
+
+
+@given('the price on line {n:d} of the file of store {store} is "{value}"')
+def step_bad_row(context, n, store, value):
+    key = f"prices_raw/day={DAY}/{store}-export.csv"
+    lines = context.lake.get_object(key).decode().splitlines()
+    cells = lines[n - 1].split(",")
+    cells[4] = value
+    lines[n - 1] = ",".join(cells)
+    data, original = ("\n".join(lines) + "\n").encode(), context.lake.get_object
+    context.lake.get_object = lambda k: data if k == key else original(k)
+
+
+@then('the reason names line {n:d} and the field "{field}"')
+def step_line_field(context, n, field):
+    held = [v for v in context.verdicts.values() if v["verdict"] == "hold"]
+    assert held[0]["reasons"][0].startswith(f"line {n}: {field}: "), held
+
+
+@given('the first event has the operation "{operation}"')
+def step_bad_event(context, operation):
+    events = context.catalog.events()
+    events[0]["detail"]["typeOfChange"] = operation
+    context.catalog.events = lambda: events
+
+
+@then('the watch refuses the event and names the field "{field}"')
+def step_refuse_event(context, field):
+    assert context.refused and field in context.refused, context.refused
+
+
+@given("the simulator streams the price updates from {hhmm} for {minutes:d} minutes")
+def step_load(context, hhmm, minutes):
+    context.load = {"start_s": int(hhmm[3:]) * 60, "minutes": minutes, "handler_delay_s": 0.0}
+
+
+@given("the handler needs {seconds:d} seconds for each update")
+def step_slow(context, seconds):
+    context.load["handler_delay_s"] = float(seconds)
+
+
+@when("{n:d} simulated shoppers ask for latest prices during that time")
+def step_users(context, n):
+    context.load_report = asyncio.run(load.run(users=n, **context.load))
+
+
+@then("the p99 latency of the queries is under {ms:d} ms")
+def step_p99(context, ms):
+    assert context.load_report.p99_ms < ms, context.load_report
+
+
+@then("the largest staleness is at most {s:d} seconds")
+def step_fresh(context, s):
+    assert context.load_report.max_staleness_s <= s, context.load_report
+
+
+@then("the largest staleness is more than {s:d} seconds")
+def step_stale(context, s):
+    assert context.load_report.max_staleness_s > s, context.load_report
+
+
+@then("the report says the answers are within the window")
+def step_report_ok(context):
+    assert "within the window" in context.load_report.line()
+
+
+@then("the report says the handler is behind")
+def step_report_behind(context):
+    assert "the handler is behind" in context.load_report.line()

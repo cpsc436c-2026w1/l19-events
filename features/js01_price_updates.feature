@@ -40,3 +40,43 @@ Feature: Price updates of my store
   Scenario: A window without updates is reported with a count of 0
     Given the simulator does not send an update from 09:40 to 09:50
     Then windows 09:40 and 09:45 are reported with a count of 0 for every store
+
+  @R070
+  Scenario Outline: An update that does not fit the input model is rejected with the field named
+    Given the simulator plants an update with <fault>
+    When the window function receives it
+    Then the update is in the rejected list and the reason names the field "<field>"
+    And the window function does not fail
+
+    Examples:
+      | fault            | field |
+      | a missing price  | price |
+      | a price as text  | price |
+      | an unknown store | store |
+
+  @R080
+  Scenario: One bad record does not stop the other records of its batch
+    Given the simulator plants a batch of 8 updates whose sixth lacks a price
+    And the window function does not check its input
+    When Lambda delivers the batch, splits it on an error and sends a failed record aside
+    Then 7 updates are applied once
+    And 1 record is in the failure list, with its sequence number and without its content
+    And delivering the batch again counts 0 updates twice
+
+  @R080
+  Scenario: With the input check the same batch does not fail
+    Given the simulator plants a batch of 8 updates whose sixth lacks a price
+    When Lambda delivers the batch, splits it on an error and sends a failed record aside
+    Then 7 updates are applied once
+    And 0 records are in the failure list
+
+  @R090
+  Scenario: A replay from the start of the stream gives the stored numbers
+    When the window numbers are rebuilt from the start of the stream
+    Then the replayed numbers equal the stored numbers
+
+  @R090
+  Scenario: A replay shows what a function without the duplicate check counted twice
+    Given the window function does not skip an update it has seen
+    When the window numbers are rebuilt from the start of the stream
+    Then the replayed numbers differ from the stored numbers in window 09:25 only

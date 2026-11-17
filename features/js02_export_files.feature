@@ -95,6 +95,14 @@ Feature: The night's export files
     When the agent triages the held file of store centre
     Then the agent made at most 0 model calls and 0 tool calls
 
+  @R080
+  Scenario: A file with a row that does not fit the row model is held with the line and the field
+    Given the simulator delivers the export files of the night "normal-day"
+    And the price on line 4 of the file of store north is "n/a"
+    When the file check runs on each new file
+    Then the file of store north is held
+    And the reason names line 4 and the field "price"
+
   @R070
   Scenario: A file that arrives after the job started gets one proposed rerun
     Given the simulator delivers the export files of the night "late-file"

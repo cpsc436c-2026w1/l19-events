@@ -219,6 +219,44 @@
   },
   {
    "facts": {
+    "event_ids": [
+     "68237265b8f13b5d60e1fb2013f794e1",
+     "7836f75cb8bb8d88527104a3265ab73f",
+     "22bec7da299c5525c6a43b7050c3e946"
+    ],
+    "fields": [
+     "price",
+     "price",
+     "store"
+    ],
+    "records": 3
+   },
+   "files": [
+    "events/price-updates/invalid-records.jsonl"
+   ],
+   "id": "invalid-update",
+   "kind": "price-updates",
+   "planted": true,
+   "what": "Three records that do not fit the input model: a missing price, a price as text, an unknown store."
+  },
+  {
+   "facts": {
+    "bad_position": 6,
+    "event_ids": [
+     "68237265b8f13b5d60e1fb2013f794e1"
+    ],
+    "records": 8
+   },
+   "files": [
+    "events/price-updates/failing-batch.json"
+   ],
+   "id": "failing-batch",
+   "kind": "price-updates",
+   "planted": true,
+   "what": "One batch of 8 records for the 09:05 window; the sixth lacks a price, so a function that does not check its input raises on it."
+  },
+  {
+   "facts": {
     "events": 3,
     "job_started_at": "2026-10-31T02:00:04Z",
     "per_store": {

@@ -9,6 +9,23 @@ uv run python make_events.py          # writes events/ again (the same bytes)
 uv run pytest                         # stub models only
 ```
 
+## Streams and simulation: five short demos
+
+Each prints a few lines. No model calls.
+
+```
+uv run python inputs.py                    # input models: three planted invalid updates, the field each message names
+uv run python load.py                      # 50 simulated users query latest prices while updates stream in
+uv run python load.py --handler-delay 4    # a slow handler: answers older than the window, and the report says so
+uv run python failing_batch.py             # one bad record in a batch of 8: split, sent aside, the rest applied once
+uv run python replay.py                    # rebuild the window numbers from the start of the stream: equal
+uv run python replay.py --no-dedupe        # a function without the duplicate check: the windows that differ
+```
+
+`load.py` plays the simulator's clock 200 times faster than real time; its latency is of an in-memory store (the
+file's header says what changes on DynamoDB). `failing_batch.py` simulates what Lambda does with the event source
+mapping settings named in its header.
+
 ## Code handlers
 
 Each file has a Lambda-shaped `handler(event, context)` and prints one line per result when run. The results are

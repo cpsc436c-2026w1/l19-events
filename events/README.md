@@ -10,7 +10,7 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 
 | Kind | Folder | One event is | Cases |
 |---|---|---|---|
-| Price updates | `price-updates/` | one change record of the latest-price DynamoDB table (item before and after) | 6 |
+| Price updates | `price-updates/` | one change record of the latest-price DynamoDB table (item before and after) | 8 |
 | Batch files | `batch-files/` | one S3 event notification for a new export file in `prices_raw/day=2026-10-31/` | 7 |
 | Catalog changes | `catalog-changes/` | one EventBridge event of the Glue Data Catalog | 8 |
 
@@ -24,6 +24,8 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 | `eur-update` | price-updates | planted | One update of store online with currency EUR and the EUR amount; the table holds CAD. | `price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids` |
 | `store-burst` | price-updates | planted | 120 updates of store north from 09:20:00 to 09:22:00, each price 10 % lower. | `price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids` |
 | `quiet-windows` | price-updates | planted | No update from any store from 09:40 to 09:50: two windows without records. | `price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids` |
+| `invalid-update` | price-updates | planted | Three records that do not fit the input model: a missing price, a price as text, an unknown store. | `price-updates/invalid-records.jsonl` |
+| `failing-batch` | price-updates | planted | One batch of 8 records for the 09:05 window; the sixth lacks a price, so a function that does not check its input raises on it. | `price-updates/failing-batch.json` |
 | `normal-day` | batch-files | normal | Three exports arrive before the job starts; rows and prices are in their usual range. | `batch-files/normal-day/` |
 | `duplicate-rows` | batch-files | planted | Export of store centre holds every row twice: the same obs_id appears two times. | `batch-files/duplicate-rows/` |
 | `missing-store` | batch-files | planted | Export of store online does not arrive: two files, two events. | `batch-files/missing-store/` |

@@ -55,7 +55,7 @@ def test_generator_reads_no_clock_and_no_unseeded_randomness():
 
 def test_manifest_counts_and_files(manifest, cases):
     kinds = [c["kind"] for c in manifest["cases"]]
-    assert {k: kinds.count(k) for k in set(kinds)} == {"price-updates": 6, "batch-files": 7, "catalog-changes": 8}
+    assert {k: kinds.count(k) for k in set(kinds)} == {"price-updates": 8, "batch-files": 7, "catalog-changes": 8}
     assert len(cases) == len(manifest["cases"])
     for c in cases.values():
         assert re.fullmatch(r"[a-z]+-[a-z]+", c["id"]), c["id"]          # two-word names, no letter codes
@@ -89,7 +89,7 @@ def test_triage_gives_each_case_one_verdict_and_one_lens(cases):
 
 def test_stories_map_requirements_to_real_cases(cases):
     text = (ROOT / "STORIES.md").read_text()
-    assert len(re.findall(r"^## JS\d\d ", text, re.M)) == 3
+    assert len(re.findall(r"^## JS\d\d ", text, re.M)) == 4
     reqs = [r for r in text.splitlines() if re.match(r"\| R\d{3} \|", r)]
     assert len(reqs) >= 12
     for r in reqs:

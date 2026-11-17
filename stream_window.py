@@ -21,6 +21,9 @@ import statistics
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from pydantic import ValidationError
+
+from inputs import PriceUpdate, problems
 from results import Correction, Rejected, WindowResult
 
 WINDOW_S = 300
@@ -59,18 +62,30 @@ def window_start(ts: str) -> str:
     return _iso(t - timedelta(seconds=(t.minute * 60 + t.second) % WINDOW_S))
 
 
-def handler(event: dict, context=None) -> dict:
+def handler(event: dict, context=None, validate: bool = True, dedupe: bool = True) -> dict:
+    """validate=False and dedupe=False exist for two demos: a function that does not check its input raises on a
+    bad record (failing_batch.py), and one that does not skip a record it has seen counts it twice (replay.py)."""
     state = event.get("state") or {}
-    seen, stores = set(state.get("seen", [])), dict(state.get("stores", {}))
+    seen, stores = set(state.get("seen", [])), {k: dict(v) for k, v in state.get("stores", {}).items()}
     start, end = event["window"]["start"], event["window"]["end"]
     for record in event["Records"]:
-        if record["eventID"] in seen:                                # delivered before: count it once
+        if dedupe and record["eventID"] in seen:                     # delivered before: count it once
             continue
-        seen.add(record["eventID"])
+        if validate:
+            try:
+                PriceUpdate.from_record(record)                      # the boundary: input that does not fit stops here
+            except ValidationError as e:
+                seen.add(record["eventID"])
+                SINK.rejected[record["eventID"]] = Rejected(
+                    event_id=record["eventID"], store=str(record["dynamodb"].get("Keys", {}).get("store", {}).get("S")),
+                    currency="", reason="; ".join(problems(e)))
+                continue
         if record["eventName"] == "REMOVE":
+            seen.add(record["eventID"])
             continue
         item = record["dynamodb"]["NewImage"]
-        store, price = item["store"]["S"], float(item["price"]["N"])
+        store, price = item["store"]["S"], float(item["price"]["N"])     # without validation: KeyError or ValueError
+        seen.add(record["eventID"])
         if item["currency"]["S"] != "CAD":
             SINK.rejected[record["eventID"]] = Rejected(event_id=record["eventID"], store=store,
                                                         currency=item["currency"]["S"], reason="the table holds CAD only")
@@ -107,7 +122,7 @@ def final_numbers(sink: Sink, first_window: str, windows: int) -> dict[str, dict
     return out
 
 
-def run_local(records: list[dict], batch_size: int = 10) -> None:
+def run_local(records: list[dict], batch_size: int = 10, **options) -> None:
     """Call the handler as Lambda does: the records of one window in batches, the state passed on, then a
     final call for the window. The window comes from ApproximateCreationDateTime."""
     by_window: dict[str, list[dict]] = {}
@@ -119,9 +134,9 @@ def run_local(records: list[dict], batch_size: int = 10) -> None:
         state, batch = {}, by_window[start]
         for i in range(0, len(batch), batch_size):
             state = handler({"Records": batch[i:i + batch_size], "window": window, "state": state,
-                             "isFinalInvokeForWindow": False, "isWindowTerminatedEarly": False})["state"]
+                             "isFinalInvokeForWindow": False, "isWindowTerminatedEarly": False}, **options)["state"]
         handler({"Records": [], "window": window, "state": state, "isFinalInvokeForWindow": True,
-                 "isWindowTerminatedEarly": False})
+                 "isWindowTerminatedEarly": False}, **options)
 
 
 if __name__ == "__main__":

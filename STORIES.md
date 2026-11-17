@@ -20,6 +20,9 @@ know the new prices are in before customers see them.
 | R040 | IF an update's currency is not CAD THEN THE SYSTEM SHALL keep it out of the average and list it as rejected | 0 such updates in any average | `eur-update` | code |
 | R050 | WHILE a store sends more than 3 times its usual number of updates THE SYSTEM SHALL count every update and flag the window | 120 of 120 counted | `store-burst` | code |
 | R060 | IF a window does not have an update THEN THE SYSTEM SHALL report a count of 0 for it | 2 of 2 quiet windows reported | `quiet-windows` | code |
+| R070 | IF an update does not fit the input model (a missing price, a price as text, an unknown store) THEN THE SYSTEM SHALL reject it with a reason that names the field, and go on | 3 of 3 rejected, 0 failed invocations | `invalid-update` | code |
+| R080 | IF one record makes an invocation fail THEN THE SYSTEM SHALL apply the other records of the batch once and send the failed record aside | 7 of 8 applied, 1 in the failure list, 0 counted twice | `failing-batch` | code |
+| R090 | WHEN the window numbers are rebuilt from the start of the stream THE SYSTEM SHALL give the stored numbers | 12 of 12 windows equal | `redelivered-update`, `normal-update` | code |
 
 ## JS02 Data team on call: the night's export files
 
@@ -36,6 +39,7 @@ file at night and do not repair `prices_curated` in the morning.
 | R050 | IF a file's row count differs from the usual by more than 5 % THEN THE SYSTEM SHALL hold the file | held before 02:00 | `half-file`, `duplicate-rows`, `category-missing` | code |
 | R060 | IF a held file matches no rule THEN THE SYSTEM SHALL return a cause and a fix from the fixed lists, with the facts it read | at most 10 tool calls and 12 model calls; code confirms the cause against the file | `half-file`, `category-missing` | agent, checked by an eval |
 | R070 | IF a file arrives after the day's job started THEN THE SYSTEM SHALL propose one rerun of that day and wait for approval | 1 rerun proposed, 0 started before approval | `late-file` | code |
+| R080 | IF a row of a file does not fit the row model THEN THE SYSTEM SHALL hold the file and name the line and the field | 1 file held, the first 3 such rows named | `normal-day` | code |
 
 ## JS03 Analyst: a table I query changes
 
@@ -50,14 +54,28 @@ new column to have a description within a day, so that I do not write a query ag
 | R040 | WHEN a table gets a new column THE SYSTEM SHALL draft a description and keep it as a draft until a person accepts it | at most 255 characters; 0 descriptions written without approval | `new-column` | one model call with a check in code |
 | R050 | IF an event arrives twice or out of order THEN THE SYSTEM SHALL end with the catalog's current definition and one alert | stored version 8; 1 alert for 3 events | `repeated-event` | code |
 | R060 | THE SYSTEM SHALL compare every table with its stored definition once a day | a change without an event is found within 24 hours | `no-event` | code |
+| R070 | IF an event does not fit the event model THEN THE SYSTEM SHALL refuse it with a reason that names the field | 0 definitions changed | `new-column` | code |
+
+## JS04 Shopper: the latest price while prices change
+
+When I look up a product's price in the app while the stores are changing prices (50 shoppers at once), I want the
+answer in well under a second and never a price that was replaced more than 5 minutes ago, so that the price I see
+is the one I pay.
+
+| Requirement | EARS line | Target | Tested by | Code or agent |
+|---|---|---|---|---|
+| R010 | WHEN a shopper asks for a product's latest price THE SYSTEM SHALL answer | p99 under 50 ms with 50 shoppers, on the local store | `store-burst` | code |
+| R020 | WHILE price updates arrive THE SYSTEM SHALL return a price that was the latest at most 5 minutes ago | largest staleness at most 300 s | `store-burst` | code |
+| R030 | IF the handler falls behind the stream THEN THE SYSTEM SHALL report that answers are older than the window | reported when the handler needs 4 s for an update | `store-burst` | code |
 
 ## What the mapping shows
 
 | Story | Feature | Requirements | Scenarios | Of them on a stub model | Eval |
 |---|---|---|---|---|---|
-| JS01 | `features/js01_price_updates.feature` | 6 | 6 | 0 | 0 |
-| JS02 | `features/js02_export_files.feature`, `features/js02_eval.feature` | 7 | 17 | 6 | 1 |
-| JS03 | `features/js03_catalog_changes.feature` | 6 | 10 | 3 | 0 |
+| JS01 | `features/js01_price_updates.feature` | 9 | 13 | 0 | 0 |
+| JS02 | `features/js02_export_files.feature`, `features/js02_eval.feature` | 8 | 18 | 6 | 1 |
+| JS03 | `features/js03_catalog_changes.feature` | 7 | 11 | 3 | 0 |
+| JS04 | `features/js04_latest_price.feature` | 3 | 3 | 0 | 0 |
 
 A requirement that code settles has a fixed answer, so a behave scenario with the planted case in `Given` tests it.
 JS02 R060 is served by an agent, whose answer can differ between runs. Scenarios with a stub model test what does
