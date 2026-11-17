@@ -36,6 +36,12 @@ def test_a_tag_that_names_nothing_fails():
     assert len(problems) == 3 and "R090" in problems[0] and "JS07" in problems[1] and "has no @R tag" in problems[2]
 
 
+def test_a_malformed_tag_fails():
+    feats = [_feat(["JS01"], ("a", ["R010"]), ("b", ["R020", "R06"])), _feat(["JS02", "slow"], ("c", ["R010", "JS01"]))]
+    problems, _ = T.check(STORIES, feats)
+    assert len(problems) == 3 and "R06" in problems[0] and "slow" in problems[1] and "JS01" in problems[2]
+
+
 def test_eval_on_the_stub_and_the_gate(tmp_path, monkeypatch):
     log = eval_held_file.run(log_dir=tmp_path / "good")
     assert {s.id: s.scores["cause_in_code"].answer for s in log.samples} == {

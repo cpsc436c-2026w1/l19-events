@@ -71,8 +71,8 @@ definition and compares it with the last one it stored; it never acts on the eve
 | All | 21 | 18 | 3 |
 
 Lens: 20 cases run on every row or run and 1 once at build time. No case sits under every request (no person
-is waiting for a reply). No case sits under every build yet: that column gets the tests of phase 2 (the behave
-scenarios for the code handlers and the evals of the two agents, run before a merge).
+is waiting for a reply). No case sits under every build: that column holds the tests, run before a merge (the behave
+scenarios in `features/`, and the eval of the agent with `gate.py`).
 
 One more agent trigger does not have a planted case of its own: a batch file that fails a check and matches none of the
 rules above. `half-file` and `category-missing` are two examples of it.
@@ -94,20 +94,22 @@ is cut off", "the export dropped a category"). The two planted cases have differ
 always names the same cause is right on one of two. `new-column` keeps the verdict "agent" in the table above
 although it is built as one checked model call: the real split is 18 code, 2 agent cases, 1 checked model call.
 
-Live eval on the course LLM gateway, 2026-11-17, `qwen3.8-27b`, one run, 7 of 16 model calls
+Live eval on the course LLM gateway, 2026-11-17, `qwen3.8-27b`, one run, 7 model calls counted by the hook, of 16 allowed
 (`output/eval-live/`):
 
 | Planted cause | Case | Named | Model calls | Tool calls | How the run ended |
 |---|---|---|---|---|---|
-| `partial_file` | `half-file` | none | 4 | 6 | deadline of 180 s, while it was still reading files (the held file twice, two earlier days) |
-| `category_missing` | `category-missing` | none | 3 | 5 | the reply reached the maximum of output tokens before the JSON answer |
+| `partial_file` | `half-file` | none | 4 | 6 | it read the held file and two earlier days, the cap of 6 tool calls refused a seventh read, and the deadline of 180 s cancelled the model call that would have answered |
+| `category_missing` | `category-missing` | none | 3 | 5 | it read the held file, the day before, the log and the products table; the reply reached the maximum of output tokens before the JSON answer |
 
 Accuracy 0 of 2; both files were escalated to a person, which is what the code does without a confirmed cause.
 The same model named `partial_file` in 22 s when the tool returned a ready comparison (`output/smoke.json`, the
 earlier agent). With tools that return only stored data (a map of 411 products per file, the products table),
-this model did not finish inside the limits. What the run supports: the limits and the escalation work; this
-agent is not ready for use. What to try next, each needing its own live run: a deadline of 600 s, a model with a
-larger output limit, or a tool that returns one file's product codes as a compact list.
+this model read the evidence in both cases and answered in neither inside the limits. What the run supports: the
+limits and the escalation work; this agent is not ready for use. What to try next, each needing its own live run:
+a longer deadline, a model with a larger output limit, or a tool that returns one file's product codes as a
+compact list. The stub's accuracy of 1.0 says only that the path runs: the stub's comparison is the one `verify`
+makes.
 
 A next step, not made: move `partial_file` and `category_missing` into `batch_check.py` as rules, so that the next
 such file is settled without a model call. That is how the runbook grows: a case the agent explained once becomes code.

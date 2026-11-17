@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent
+OTHER_TAGS = {"eval", "limits"}       # the only tags allowed beside @JSnn and @Rnn0
 
 
 def stories(text: str) -> dict[str, list[str]]:
@@ -67,6 +68,11 @@ def check(stories_text: str, feats: list[dict]) -> tuple[list[str], dict]:
             problems.append(f"{f['file']}: @{story} names no job story in STORIES.md")
             continue
         with_feature.add(story)
+        for name, tags in [(f["file"], f["tags"])] + [(sc["name"], sc["tags"]) for sc in f["scenarios"]]:
+            odd = [t for t in tags if not re.fullmatch(r"JS\d\d|R\d{3}", t) and t not in OTHER_TAGS]
+            odd += [t for t in tags if re.fullmatch(r"JS\d\d", t) and name != f["file"]]
+            if odd:
+                problems.append(f"{f['file']}: '{name}' has tags that name nothing: {odd}")
         for sc in f["scenarios"]:
             rs = [t for t in sc["tags"] + f["tags"] if re.fullmatch(r"R\d{3}", t)]
             if not rs:
