@@ -1,7 +1,9 @@
 # Code or agent: triage of the L19 event cases
 
-Phase 1, 2026-11-17. The cases are the generated ones in `events/` (`events/README.md`, `events/manifest.json`).
-Nothing here is implemented yet: this table says what each handler should do and who decides.
+2026-11-17. The cases are the generated ones in `events/` (`events/README.md`, `events/manifest.json`). This table
+says what each handler should do and who decides; the Built column names the file that does it. The handlers run
+locally on the event files (`RUN.md`); nothing is deployed, and alerts, holds and reruns are returned as values,
+not carried out.
 
 ## Rule used
 
@@ -18,14 +20,14 @@ The lens column says how often the reaction runs: every request, every row or ru
 
 ## Price updates (DynamoDB change stream, tumbling windows of 5 minutes)
 
-| Case | What should happen | Code or agent | Reason | Lens |
-|---|---|---|---|---|
-| `normal-update` | Add the update to its store's count and price sum for the window; at the end of the window write one count and one average per store. | code | A sum and a count per key; the function's `state` carries them between invocations. | every row or run |
-| `redelivered-update` | Count the update once: skip a record whose `eventID` is already in the window's state. | code | Lambda delivers at least once; `eventID` and `SequenceNumber` are the same on both deliveries, so one comparison settles it. | every row or run |
-| `late-update` | Add the update to the window of its `observed_at`, and correct that window's stored number. | code | Lambda sets the window from the time the record entered the stream, so the function compares `observed_at` with `window.start` itself; an update for a closed window becomes a correction keyed by store and window start. | every row or run |
-| `eur-update` | Keep the update out of the average, write it to a rejected list with its `eventID`, raise an alert for store online. | code | The table holds CAD only; `currency != "CAD"` is one comparison. Converting it in the handler would hide a fault in the writer. | every row or run |
-| `store-burst` | Count all 120 updates; flag the window when a store's count is more than 3 times its median window. A person reads the flag. | code | Counting does not change with the rate. Whether the burst is a planned promotion is not in any data the handler can read, so a model could not read more than the person does. | every row or run |
-| `quiet-windows` | Report a window without updates as a count of 0, from a check on a schedule that looks for the stored number of each window. | code | Without records there may be no invocation to react to (not checked in the documentation), so the rule reads the stored windows on a timer, not the stream. | every row or run |
+| Case | What should happen | Code or agent | Reason | Lens | Built |
+|---|---|---|---|---|---|
+| `normal-update` | Add the update to its store's count and price sum for the window; at the end of the window write one count and one average per store. | code | A sum and a count per key; the function's `state` carries them between invocations. | every row or run | `stream_window.py` |
+| `redelivered-update` | Count the update once: skip a record whose `eventID` is already in the window's state. | code | Lambda delivers at least once; `eventID` and `SequenceNumber` are the same on both deliveries, so one comparison settles it. | every row or run | `stream_window.py` |
+| `late-update` | Add the update to the window of its `observed_at`, and correct that window's stored number. | code | Lambda sets the window from the time the record entered the stream, so the function compares `observed_at` with `window.start` itself; an update for a closed window becomes a correction keyed by store and window start. | every row or run | `stream_window.py` |
+| `eur-update` | Keep the update out of the average, write it to a rejected list with its `eventID`, raise an alert for store online. | code | The table holds CAD only; `currency != "CAD"` is one comparison. Converting it in the handler would hide a fault in the writer. | every row or run | `stream_window.py` |
+| `store-burst` | Count all 120 updates; flag the window when a store's count is more than 3 times its median window. A person reads the flag. | code | Counting does not change with the rate. Whether the burst is a planned promotion is not in any data the handler can read, so a model could not read more than the person does. | every row or run | `stream_window.py` |
+| `quiet-windows` | Report a window without updates as a count of 0, from a check on a schedule that looks for the stored number of each window. | code | Without records there may be no invocation to react to (not checked in the documentation), so the rule reads the stored windows on a timer, not the stream. | every row or run | `stream_window.py` (`final_numbers`) |
 
 ## Batch files (S3 event for a new export in `prices_raw/day=2026-10-31/`)
 
@@ -33,30 +35,30 @@ The handler runs when a file arrives, before the nightly job `curate-prices`. It
 (rows, products, repeated `obs_id`, average price converted to CAD by each row's currency label, arrival time) and compares them with `events/batch-files/baseline.json`
 (7 days) and with the job's start time. Tolerances are L18's: rows within 5 %, average price within 8 %.
 
-| Case | What should happen | Code or agent | Reason | Lens |
-|---|---|---|---|---|
-| `normal-day` | Mark the three files as checked; the job reads them. No alert, no model call. | code | All five values are inside their range. | every row or run |
-| `duplicate-rows` | Hold the file of store centre, alert with the count of repeated `obs_id`; ask the store's export team for a new file. | code | `obs_id` is unique in a normal file (a second observation has its own id), so a repeated id is one `GROUP BY`. A row count of twice the usual confirms it. | every row or run |
-| `missing-store` | At 01:55 list the day's prefix; a store without a file is named in an alert and the upstream team is asked (L18 fix `ask_upstream`). | code | A file that does not arrive sends no event, so the rule is a check on a schedule: three stores expected, two found. | every row or run |
-| `not-converted` | Hold the file of store online; alert that its currency label is CAD and its average in CAD (4.05) is near 1/1.55 of its 7-day average (6.37). | code | Two comparisons: the label differs from the store's currency (EUR), and the ratio matches the fixed rate (the same ratio test as `verify()` in L18). | every row or run |
-| `half-file` | Code holds the file (242 rows, 52 % below the usual 501). The agent then finds what is wrong with it and returns a cause and a fix for a person. | agent | No rule names this: the file is valid CSV, ids are unique, the average price is in range. Whether to ask for a new file or to accept a shorter list depends on what a read of the file shows (which products are missing). | every row or run |
-| `late-file` | Propose one rerun of the day's partition (L18 fix `rerun_partition`), started once after a person approves. | code | One comparison: the file's `eventTime` is after the job's `StartedOn` for that day. | every row or run |
+| Case | What should happen | Code or agent | Reason | Lens | Built |
+|---|---|---|---|---|---|
+| `normal-day` | Mark the three files as checked; the job reads them. No alert, no model call. | code | All five values are inside their range. | every row or run | `batch_check.py` |
+| `duplicate-rows` | Hold the file of store centre, alert with the count of repeated `obs_id`; ask the store's export team for a new file. | code | `obs_id` is unique in a normal file (a second observation has its own id), so a repeated id is one `GROUP BY`. A row count of twice the usual confirms it. | every row or run | `batch_check.py` |
+| `missing-store` | At 01:55 list the day's prefix; a store without a file is named in an alert and the upstream team is asked (L18 fix `ask_upstream`). | code | A file that does not arrive sends no event, so the rule is a check on a schedule: three stores expected, two found. | every row or run | `batch_check.py` (`deadline_handler`) |
+| `not-converted` | Hold the file of store online; alert that its currency label is CAD and its average in CAD (4.05) is near 1/1.55 of its 7-day average (6.37). | code | Two comparisons: the label differs from the store's currency (EUR), and the ratio matches the fixed rate (the same ratio test as `verify()` in L18). | every row or run | `batch_check.py` |
+| `half-file` | Code holds the file (242 rows, 52 % below the usual 501). The agent then finds what is wrong with it and returns a cause and a fix for a person. | agent | No rule names this: the file is valid CSV, ids are unique, the average price is in range. Whether to ask for a new file or to accept a shorter list depends on what a read of the file shows (which products are missing). | every row or run | `batch_check.py` holds it; `half_file_agent.py` (Strands) names the cause; `verify` checks it |
+| `late-file` | Propose one rerun of the day's partition (L18 fix `rerun_partition`), started once after a person approves. | code | One comparison: the file's `eventTime` is after the job's `StartedOn` for that day. | every row or run | `batch_check.py` (proposes the rerun; starting it is not built) |
 
 ## Catalog changes (EventBridge event of the Glue Data Catalog)
 
 The event names the table and the operation, not the columns. Every handler therefore reads the table's current
 definition and compares it with the last one it stored; it never acts on the event's content or order.
 
-| Case | What should happen | Code or agent | Reason | Lens |
-|---|---|---|---|---|
-| `new-partition` | Record the partition; no alert. | code | `typeOfChange` is `CreatePartition` and the columns are unchanged. | every row or run |
-| `new-table` | Record the table and its columns; list it as lacking descriptions. | code | A fixed read (`GetTable`) and a store of the result. | every row or run |
-| `new-column` | Code records the column and lets the job run (it does not read the column). A model drafts a description from the column's name, type and sample values; a person accepts or edits it before it is written to the catalog. | agent | The description is text that no rule can write, and what to say depends on the sample values read. It is written once and reviewed, as the catalog descriptions on L18's build-time column. | once at build time |
-| `type-change` | Block the next run of `curate-prices` and alert: `price` is one of the columns the job reads and its type differs. A person changes the job (L18 fix `change_job_then_rerun`). | code | Compare the stored and the current type of each column in the job's read list (`job.reads` in `events/manifest.json`). | every row or run |
-| `renamed-column` | Block the next run and alert: `price` is gone and `unit_price` is new with the same type. A person changes the job. | code | The reaction is the same for a rename and for a drop: a column the job reads is missing. The handler does not need to decide which it was. This is L18's `schema_change`, found before the job fails, not after. | every row or run |
-| `dropped-column` | Alert the table's owners that `source` is gone; the job is not blocked. | code | `source` is not in the job's read list; set difference of column names. | every row or run |
-| `repeated-event` | The stored definition equals the catalog's current one (version 8) after each of the three events; one alert, not three. | code | The handler compares `VersionId` with the stored one and acts only when it is newer. | every row or run |
-| `no-event` | A daily check compares every table with its stored definition and finds the removed column within a day. | code | AWS states the events are best effort, so the comparison also runs on a schedule. | every row or run |
+| Case | What should happen | Code or agent | Reason | Lens | Built |
+|---|---|---|---|---|---|
+| `new-partition` | Record the partition; no alert. | code | `typeOfChange` is `CreatePartition` and the columns are unchanged. | every row or run | `catalog_watch.py` |
+| `new-table` | Record the table and its columns; list it as lacking descriptions. | code | A fixed read (`GetTable`) and a store of the result. | every row or run | `catalog_watch.py` |
+| `new-column` | Code records the column and lets the job run (it does not read the column). A model drafts a description from the column's name, type and sample values; a person accepts or edits it before it is written to the catalog. | agent | The description is text that no rule can write, and what to say depends on the sample values read. It is written once and reviewed, as the catalog descriptions on L18's build-time column. | once at build time | `catalog_watch.py` records it; `column_drafter.py` drafts to `pending/` |
+| `type-change` | Block the next run of `curate-prices` and alert: `price` is one of the columns the job reads and its type differs. A person changes the job (L18 fix `change_job_then_rerun`). | code | Compare the stored and the current type of each column in the job's read list (`job.reads` in `events/manifest.json`). | every row or run | `catalog_watch.py` |
+| `renamed-column` | Block the next run and alert: `price` is gone and `unit_price` is new with the same type. A person changes the job. | code | The reaction is the same for a rename and for a drop: a column the job reads is missing. The handler does not need to decide which it was. This is L18's `schema_change`, found before the job fails, not after. | every row or run | `catalog_watch.py` |
+| `dropped-column` | Alert the table's owners that `source` is gone; the job is not blocked. | code | `source` is not in the job's read list; set difference of column names. | every row or run | `catalog_watch.py` |
+| `repeated-event` | The stored definition equals the catalog's current one (version 8) after each of the three events; one alert, not three. | code | The handler compares `VersionId` with the stored one and acts only when it is newer. | every row or run | `catalog_watch.py` |
+| `no-event` | A daily check compares every table with its stored definition and finds the removed column within a day. | code | AWS states the events are best effort, so the comparison also runs on a schedule. | every row or run | `catalog_watch.py` (`daily_handler`) |
 
 ## Counts
 
@@ -86,8 +88,21 @@ rules above. `half-file` is the example of it.
 | A person | reads the evidence and asks the export team for a new file | accepts or edits the draft; only then is it written to the catalog |
 | Limits in code | 10 tool calls, 12 model calls, 180 s (L18) | one draft per column; 3 tool calls |
 
-Possible extension, not made: a cause `partial_file` with the fix `ask_upstream`, so that the next half-size file
-is settled by a rule. That is how the runbook grows: a case the agent explained once becomes code.
+As built, three things differ from the table above (phase 1's plan):
+
+- **Causes.** The agent's fixed list is the file-level one in `results.py`: `no_fault`, `duplicate_rows`,
+  `currency_not_converted`, `late_arrival`, `missing_input`, `partial_file`, `other`. `partial_file` (fix
+  `ask_upstream`) is new; `verify` confirms it when the file is short, ids are unique and every missing product
+  sorts after the last one present. A cause the data does not show gets the fix `escalate`.
+- **Tools.** The agent has three tools, each for the one file of the event and without arguments:
+  `summarize_file`, `previous_days`, `export_log` (the store's export log is a design for this demo). L18's
+  `list_raw_objects` and `count_rows` are not used. Caps: 8 model calls, 6 tool calls, 600 s.
+- **Drafter.** `new-column` is one model call with a check in code and at most 2 retries (evaluator-optimizer),
+  not an agent with tools: the sample values are read by code and put in the user message. It returns
+  `description` and `sample_values_used`; the status `draft` or `cannot_describe` is set by code.
+
+A next step, not made: move `partial_file` into `batch_check.py` as a rule, so that the next half-size file is
+settled without a model call. That is how the runbook grows: a case the agent explained once becomes code.
 
 ## Where this differs from L18's triage code
 
