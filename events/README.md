@@ -47,10 +47,12 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
   function gets if it trusts the delivery. `window-event.json` is one invocation as Lambda sends it with a tumbling
   window.
 - `batch-files/<case>/prices_raw/day=2026-10-31/<store>-export.csv`: the files of one night; `s3-events.json` holds their
-  notifications in the order of arrival. `baseline.json` has rows, size and average price of each store's file for
+  notifications in the order of arrival; `export-logs/<store>.log` is the store's export log for that file (a design
+  for this demo: what the export read and what it uploaded). `baseline.json` has rows, size and average price of each store's file for
   the 7 days before.
 - `catalog-changes/<case>/events.json`: the events in the order of delivery; `before.json` and `after.json` are the
-  table as `GetTable` returns it, cut to name, version, columns and partition keys.
+  table as `GetTable` returns it, cut to name, version, columns and partition keys. `new-column/samples.json` has 20
+  values of the new column.
 
 ## What the AWS documentation says about each shape (read 2026-11-17)
 

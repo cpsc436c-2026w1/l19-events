@@ -3,7 +3,10 @@ name = "l19-events"
 version = "0.1.0"
 description = "CPSC 436C L19: generated event examples on the grocery-price case, and their code-or-agent triage"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.3",
+    "strands-agents[openai]==1.64.0",
+]
 
 [dependency-groups]
 dev = ["pytest>=8"]

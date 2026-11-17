@@ -1,0 +1,27 @@
+{
+ "column": "on_promotion",
+ "table": "prices_raw",
+ "type": "boolean",
+ "values": [
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  true,
+  false,
+  true
+ ]
+}

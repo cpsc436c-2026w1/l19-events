@@ -266,8 +266,11 @@
    "files": [
     "events/batch-files/normal-day/s3-events.json",
     "events/batch-files/normal-day/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/normal-day/export-logs/north.log",
     "events/batch-files/normal-day/prices_raw/day=2026-10-31/centre-export.csv",
-    "events/batch-files/normal-day/prices_raw/day=2026-10-31/online-export.csv"
+    "events/batch-files/normal-day/export-logs/centre.log",
+    "events/batch-files/normal-day/prices_raw/day=2026-10-31/online-export.csv",
+    "events/batch-files/normal-day/export-logs/online.log"
    ],
    "id": "normal-day",
    "kind": "batch-files",
@@ -323,8 +326,11 @@
    "files": [
     "events/batch-files/duplicate-rows/s3-events.json",
     "events/batch-files/duplicate-rows/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/duplicate-rows/export-logs/north.log",
     "events/batch-files/duplicate-rows/prices_raw/day=2026-10-31/centre-export.csv",
-    "events/batch-files/duplicate-rows/prices_raw/day=2026-10-31/online-export.csv"
+    "events/batch-files/duplicate-rows/export-logs/centre.log",
+    "events/batch-files/duplicate-rows/prices_raw/day=2026-10-31/online-export.csv",
+    "events/batch-files/duplicate-rows/export-logs/online.log"
    ],
    "id": "duplicate-rows",
    "kind": "batch-files",
@@ -367,7 +373,9 @@
    "files": [
     "events/batch-files/missing-store/s3-events.json",
     "events/batch-files/missing-store/prices_raw/day=2026-10-31/north-export.csv",
-    "events/batch-files/missing-store/prices_raw/day=2026-10-31/centre-export.csv"
+    "events/batch-files/missing-store/export-logs/north.log",
+    "events/batch-files/missing-store/prices_raw/day=2026-10-31/centre-export.csv",
+    "events/batch-files/missing-store/export-logs/centre.log"
    ],
    "id": "missing-store",
    "kind": "batch-files",
@@ -423,8 +431,11 @@
    "files": [
     "events/batch-files/not-converted/s3-events.json",
     "events/batch-files/not-converted/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/not-converted/export-logs/north.log",
     "events/batch-files/not-converted/prices_raw/day=2026-10-31/centre-export.csv",
-    "events/batch-files/not-converted/prices_raw/day=2026-10-31/online-export.csv"
+    "events/batch-files/not-converted/export-logs/centre.log",
+    "events/batch-files/not-converted/prices_raw/day=2026-10-31/online-export.csv",
+    "events/batch-files/not-converted/export-logs/online.log"
    ],
    "id": "not-converted",
    "kind": "batch-files",
@@ -480,8 +491,11 @@
    "files": [
     "events/batch-files/half-file/s3-events.json",
     "events/batch-files/half-file/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/half-file/export-logs/north.log",
     "events/batch-files/half-file/prices_raw/day=2026-10-31/centre-export.csv",
-    "events/batch-files/half-file/prices_raw/day=2026-10-31/online-export.csv"
+    "events/batch-files/half-file/export-logs/centre.log",
+    "events/batch-files/half-file/prices_raw/day=2026-10-31/online-export.csv",
+    "events/batch-files/half-file/export-logs/online.log"
    ],
    "id": "half-file",
    "kind": "batch-files",
@@ -537,8 +551,11 @@
    "files": [
     "events/batch-files/late-file/s3-events.json",
     "events/batch-files/late-file/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/late-file/export-logs/north.log",
     "events/batch-files/late-file/prices_raw/day=2026-10-31/centre-export.csv",
-    "events/batch-files/late-file/prices_raw/day=2026-10-31/online-export.csv"
+    "events/batch-files/late-file/export-logs/centre.log",
+    "events/batch-files/late-file/prices_raw/day=2026-10-31/online-export.csv",
+    "events/batch-files/late-file/export-logs/online.log"
    ],
    "id": "late-file",
    "kind": "batch-files",
@@ -590,7 +607,8 @@
    "files": [
     "events/catalog-changes/new-column/events.json",
     "events/catalog-changes/new-column/before.json",
-    "events/catalog-changes/new-column/after.json"
+    "events/catalog-changes/new-column/after.json",
+    "events/catalog-changes/new-column/samples.json"
    ],
    "id": "new-column",
    "kind": "catalog-changes",

@@ -178,6 +178,16 @@ def s3_event(key: str, data: bytes, arrived_at: str) -> dict:
                           "sequencer": f"{int(t.timestamp() * 1000):016X}{h[:4].upper()}"}}}]}
 
 
+def export_log(store: str, arrived: str, duplicates: int, size: int) -> list[str]:
+    """The store's export log for one night (a design for this demo). It says what the export read and what it
+    uploaded; it does not name a fault."""
+    t = datetime.strptime(arrived, "%Y-%m-%dT%H:%M:%SZ")
+    at = lambda s: (t - timedelta(seconds=s)).strftime("%H:%M:%S")   # noqa: E731
+    return [f"{at(12)} INFO export started for store {store}, day={DAY}",
+            f"{at(7)} INFO query returned {PRODUCTS + duplicates} rows for {PRODUCTS} products",
+            f"{at(1)} INFO upload finished: {size} bytes"]
+
+
 BATCH_CASES = {
     "normal-day": "Three exports arrive before the job starts; rows and prices are in their usual range.",
     "duplicate-rows": "Export of store centre holds every row twice: the same obs_id appears two times.",
@@ -227,6 +237,10 @@ def build_batch_files(base: dict) -> tuple[list[dict], dict]:
             path.write_bytes(data)
             files.append(rel(path))
             facts[store] = file_facts(rows, data, arrived)
+            log = folder / "export-logs" / f"{store}.log"
+            log.parent.mkdir(parents=True, exist_ok=True)
+            log.write_text("\n".join(export_log(store, arrived, DUPLICATES_ON_DAY[store], len(data))) + "\n")
+            files.append(rel(log))
             events.append((arrived, s3_event(key, data, arrived)))
         events = [e for _, e in sorted(events, key=lambda x: x[0])]         # in the order the files arrived
         dump(folder / "s3-events.json", events)
@@ -452,6 +466,11 @@ def build_catalog_changes() -> list[dict]:
             if obj is not None:
                 dump(folder / name, obj)
                 files.append(rel(folder / name))
+        if cid == "new-column":
+            r = rng("samples")
+            dump(folder / "samples.json", {"table": "prices_raw", "column": promo[0], "type": promo[1],
+                                           "values": [r.random() < 0.2 for _ in range(20)]})
+            files.append(rel(folder / "samples.json"))
         if cid == "repeated-event":
             dump(folder / "between.json", raw(with_promo, 7, "2026-11-05T10:00:00Z"))
             files.append(rel(folder / "between.json"))
@@ -496,10 +515,12 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
   function gets if it trusts the delivery. `window-event.json` is one invocation as Lambda sends it with a tumbling
   window.
 - `batch-files/<case>/prices_raw/day={day}/<store>-export.csv`: the files of one night; `s3-events.json` holds their
-  notifications in the order of arrival. `baseline.json` has rows, size and average price of each store's file for
+  notifications in the order of arrival; `export-logs/<store>.log` is the store's export log for that file (a design
+  for this demo: what the export read and what it uploaded). `baseline.json` has rows, size and average price of each store's file for
   the 7 days before.
 - `catalog-changes/<case>/events.json`: the events in the order of delivery; `before.json` and `after.json` are the
-  table as `GetTable` returns it, cut to name, version, columns and partition keys.
+  table as `GetTable` returns it, cut to name, version, columns and partition keys. `new-column/samples.json` has 20
+  values of the new column.
 
 ## What the AWS documentation says about each shape (read 2026-11-17)
 
