@@ -34,7 +34,7 @@ file at night and do not repair `prices_curated` in the morning.
 | R030 | IF a store's file has not arrived by 01:55 THEN THE SYSTEM SHALL alert and name the store | 1 store named, 5 minutes before the job | `missing-store`, `late-file` | code |
 | R040 | IF a store's average price in CAD differs from its 7-day average by more than 8 % THEN THE SYSTEM SHALL hold the file | held before 02:00 | `not-converted` | code |
 | R050 | IF a file's row count differs from the usual by more than 5 % THEN THE SYSTEM SHALL hold the file | held before 02:00 | `half-file`, `duplicate-rows`, `category-missing` | code |
-| R060 | IF a held file matches no rule THEN THE SYSTEM SHALL return a cause and a fix from the fixed lists, with the facts it read | at most 6 tool calls and 8 model calls; code confirms the cause against the file | `half-file`, `category-missing` | agent, checked by an eval |
+| R060 | IF a held file matches no rule THEN THE SYSTEM SHALL return a cause and a fix from the fixed lists, with the facts it read | at most 10 tool calls and 12 model calls; code confirms the cause against the file | `half-file`, `category-missing` | agent, checked by an eval |
 | R070 | IF a file arrives after the day's job started THEN THE SYSTEM SHALL propose one rerun of that day and wait for approval | 1 rerun proposed, 0 started before approval | `late-file` | code |
 
 ## JS03 Analyst: a table I query changes

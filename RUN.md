@@ -24,7 +24,7 @@ state); its typed rows (`WindowResult`, `Correction`, `Rejected`) go to the sink
 ## Agent for a held file (Strands)
 
 ```
-uv run python half_file_agent.py                          # stub model: reads four tools, names partial_file
+uv run python half_file_agent.py                          # stub model: reads five tool results, names partial_file
 uv run python half_file_agent.py --case category-missing  # the other planted cause
 uv run python half_file_agent.py --model stub-wrong       # names a cause the data does not show: refused, escalate
 uv run python half_file_agent.py --model stub-runaway     # never stops: the limits end it
@@ -58,14 +58,15 @@ printed or saved.
 
 ```
 export COURSE_MCP_TOKEN=...               # your course token
-uv run python half_file_agent.py --model gateway          # at most 8 model calls
+uv run python half_file_agent.py --model gateway          # at most 12 model calls
 uv run python column_drafter.py --model gateway           # at most 3 model calls
 L19_LIVE=1 uv run python eval_held_file.py                # the eval live: 2 cases, at most 16 model calls
-uv run python gate.py output/eval-live --threshold 0.5    # the saved run of 2026-11-17 fails it: accuracy 0.00
+uv run python gate.py output/eval-live-2 --threshold 0.5  # a saved run that passes; output/eval-live fails (0.00)
 L19_LIVE=1 uv run behave --tags=eval                      # the same eval as a scenario
 ```
 
 `GATEWAY_URL` changes the gateway; `gateway:<model>` or `L19_MODEL` changes the model (default `qwen3.8-27b`).
 The threshold for a live run (`L19_LIVE_THRESHOLD`, 0.5) is a starting value: set it from repeated runs of
 unchanged code. Saved runs of 2026-11-17: `output/smoke.json` (the first agent, whose tools returned a flag that
-the check also tested; kept for comparison) and `output/eval-live/` (the agent as it is now).
+the check also tested; kept for comparison) `output/eval-live/` (tools that returned whole files; 0 of 2)
+and `output/eval-live-2/` (the agent as it is now; 2 of 2). `L19_LOG_DIR` names the folder of a live run.

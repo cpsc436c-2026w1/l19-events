@@ -13,7 +13,7 @@ case, code checks the model's answer, a person approves a change.
 - **code**: a rule a team can write now settles the reaction. The rule reads a fixed set of values and its
   answer does not depend on what an earlier read showed.
 - **agent**: the next step depends on what a read shows, or the case is new and no rule names it. The agent gets
-  read-only tools, limits in code (here 6 tool calls, 8 model calls, 180 s) and must return a value from a
+  read-only tools, limits in code (here 10 tool calls, 12 model calls, 300 s) and must return a value from a
   fixed list; code checks that value against the data.
 
 The lens column says how often the reaction runs: every request, every row or run, every build, once at build time.
@@ -83,33 +83,30 @@ rules above. `half-file` and `category-missing` are two examples of it.
 |---|---|---|
 | Built as | bounded agent in Strands (`half_file_agent.py`): the model chooses each next tool call | one model call with a check in code and at most 2 retries (`column_drafter.py`, evaluator-optimizer); not an agent |
 | Starts when | `batch_check.py` returned `unsettled` for the file | `catalog_watch.py` returned `draft_description` |
-| Reads | four tools for the one store of the event, each returning what is stored and no comparison: `rows_per_product(day)` (the held file or one of the 7 days before), `list_files`, `export_log`, `product_categories` | code reads the column's name, type and 20 sample values and puts them in the user message |
+| Reads | five tools for the one store of the event, each returning a small summary of what is stored and no comparison between days: `file_overview(day)` and `products_per_category(day)` (the held file or one of the 7 days before), `usual_per_category` (7-day median), `list_files`, `export_log` | code reads the column's name, type and 20 sample values and puts them in the user message |
 | Must return | `cause` from the fixed list in `results.py` (`no_fault`, `duplicate_rows`, `currency_not_converted`, `late_arrival`, `missing_input`, `partial_file`, `category_missing`, `other`) and `evidence` | `description` and `sample_values_used`; code sets the status `draft` or `cannot_describe` |
 | Code checks | `verify` reads the file, the store's file of the day before and the products table itself, not the tools' results or the evidence. A cause the data does not show gets the fix `escalate` | `validate`: at most 255 characters (the catalog's limit for a column comment), names the type, the values used are among the samples, no numbers or absolute claims beyond them |
 | A person | reads the cause, the evidence and the fix `ask_upstream` | accepts or edits the draft in `pending/`; nothing writes to the catalog |
-| Limits in code | 8 model calls, 6 tool calls, 180 s, in a Strands hook | 3 model calls for one column |
+| Limits in code | 12 model calls, 10 tool calls, 300 s, in a Strands hook | 3 model calls for one column |
 
 `partial_file` and `category_missing` are in the fixed list because a person on call would name them ("the file
 is cut off", "the export dropped a category"). The two planted cases have different causes, so an agent that
 always names the same cause is right on one of two. `new-column` keeps the verdict "agent" in the table above
 although it is built as one checked model call: the real split is 18 code, 2 agent cases, 1 checked model call.
 
-Live eval on the course LLM gateway, 2026-11-17, `qwen3.8-27b`, one run, 7 model calls counted by the hook, of 16 allowed
-(`output/eval-live/`):
+Two live evals on the course LLM gateway, 2026-11-17, `qwen3.8-27b`, both planted cases, cause scored in code:
 
-| Planted cause | Case | Named | Model calls | Tool calls | How the run ended |
+| Run | Tools returned | Limits | `half-file` | `category-missing` | Model calls |
 |---|---|---|---|---|---|
-| `partial_file` | `half-file` | none | 4 | 6 | it read the held file and two earlier days, the cap of 6 tool calls refused a seventh read, and the deadline of 180 s cancelled the model call that would have answered |
-| `category_missing` | `category-missing` | none | 3 | 5 | it read the held file, the day before, the log and the products table; the reply reached the maximum of output tokens before the JSON answer |
+| `output/eval-live/` | every row count of a file (411 entries) and the whole products table | 8 model calls, 6 tool calls, 180 s | not named: the tool cap refused a seventh read and the deadline cancelled the answer | not named: the reply reached an output-token limit before the JSON | 7 |
+| `output/eval-live-2/` | small summaries (file overview, products per category, the 7-day median per category) | 12 model calls, 10 tool calls, 300 s | `partial_file`, confirmed by `verify`; 3 model calls, 5 tool calls, 30 s | `category_missing`, confirmed by `verify`; 2 model calls, 5 tool calls, 15 s | 5 |
 
-Accuracy 0 of 2; both files were escalated to a person, which is what the code does without a confirmed cause.
-The same model named `partial_file` in 22 s when the tool returned a ready comparison (`output/smoke.json`, the
-earlier agent). With tools that return only stored data (a map of 411 products per file, the products table),
-this model read the evidence in both cases and answered in neither inside the limits. What the run supports: the
-limits and the escalation work; this agent is not ready for use. What to try next, each needing its own live run:
-a longer deadline, a model with a larger output limit, or a tool that returns one file's product codes as a
-compact list. The stub's accuracy of 1.0 says only that the path runs: the stub's comparison is the one `verify`
-makes.
+Between the runs only room changed: smaller tool results and wider limits. The prompt and the list of causes are
+the same, and no tool returns a comparison or a flag. In the second run every request carried `max_tokens` 16384
+and the longest reply was 2,320 output tokens, so no reply ended at a limit. The first run's code sent the same
+value; its long reply came from reasoning over the row dumps. Whether the gateway lowers 16384 to a smaller cap
+for this key was not observed in either run. Two cases, one run each: this shows the agent can name both causes,
+not how often it does. The stub's accuracy of 1.0 says only that the path runs.
 
 A next step, not made: move `partial_file` and `category_missing` into `batch_check.py` as rules, so that the next
 such file is settled without a model call. That is how the runbook grows: a case the agent explained once becomes code.
