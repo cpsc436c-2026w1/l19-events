@@ -9,7 +9,7 @@ uv run python make_events.py          # writes events/ again (the same bytes)
 uv run pytest                         # stub models only
 ```
 
-## Streams and simulation: five short demos
+## Streams and simulation: short demos
 
 Each prints a few lines. No model calls.
 

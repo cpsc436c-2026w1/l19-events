@@ -57,6 +57,18 @@ def test_window_function_rejects_invalid_updates_and_counts_the_rest():
     assert reasons == ["price", "price", "store"]
 
 
+def test_the_window_function_uses_the_parsed_fields_and_skips_a_removed_item():
+    stream_window.SINK = stream_window.Sink()
+    event = json.loads((UPDATES / "window-event.json").read_text())
+    as_text = json.loads(json.dumps(event["Records"][0]))
+    as_text["dynamodb"]["NewImage"]["price"] = {"S": "4.50"}           # a number sent as a string still parses
+    removed = {**json.loads(json.dumps(event["Records"][1])), "eventName": "REMOVE"}
+    del removed["dynamodb"]["NewImage"]
+    out = stream_window.handler({**event, "Records": [as_text, removed]})
+    (s,) = out["state"]["stores"].values()
+    assert s == {"count": 1, "sum": 4.5} and not stream_window.SINK.rejected
+
+
 def test_batch_row_and_catalog_event_name_the_field():
     row = {"obs_id": "a" * 32, "product_code": "20057237", "store": "north", "observed_on": "2026-10-31",
            "price": "3.10", "currency": "CAD", "source": "receipt:x"}
@@ -95,8 +107,8 @@ def test_staleness_stays_inside_the_window_when_the_handler_keeps_up():
 
 def test_a_slow_handler_gives_answers_older_than_the_window_and_the_report_says_so():
     r = asyncio.run(load.run(users=50, minutes=10, handler_delay_s=4))
-    assert not r.within_window and r.max_staleness_s > load.WINDOW_S
-    assert "OLDER THAN THE WINDOW" in r.line()
+    assert not r.within_window and r.max_staleness_s > load.WINDOW_S and r.max_handler_lag_s > load.WINDOW_S
+    assert "OLDER THAN THE WINDOW: the handler is behind" in r.line()
 
 
 def test_the_store_keeps_the_newer_price_when_an_older_update_arrives_late():
@@ -117,7 +129,9 @@ def test_bisect_isolates_the_bad_record_and_applies_the_others_once():
     assert r.invocations == ["8:KeyError", "4:ok", "4:KeyError", "2:KeyError", "1:ok", "1:KeyError", "2:ok"]
     assert (r.applied, len(r.failures), r.counted_twice) == (7, 1, 0)
     bad = json.loads((UPDATES / "invalid-records.jsonl").read_text().splitlines()[0])
-    assert r.failures[0]["startSequenceNumber"] == bad["dynamodb"]["SequenceNumber"]
+    info = r.failures[0]["DDBStreamBatchInfo"]
+    assert info["startSequenceNumber"] == info["endSequenceNumber"] == bad["dynamodb"]["SequenceNumber"]
+    assert r.failures[0]["requestContext"]["condition"] == "RetryAttemptsExhausted" and info["batchSize"] == 1
     assert "NewImage" not in json.dumps(r.failures)                    # metadata about the batch, not the record
 
 

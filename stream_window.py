@@ -71,28 +71,32 @@ def handler(event: dict, context=None, validate: bool = True, dedupe: bool = Tru
     for record in event["Records"]:
         if dedupe and record["eventID"] in seen:                     # delivered before: count it once
             continue
+        if record.get("eventName") == "REMOVE":                      # a deleted item has no new price to count
+            seen.add(record["eventID"])
+            continue
         if validate:
             try:
-                PriceUpdate.from_record(record)                      # the boundary: input that does not fit stops here
+                u = PriceUpdate.from_record(record)                  # the boundary: input that does not fit stops here
             except ValidationError as e:
                 seen.add(record["eventID"])
                 SINK.rejected[record["eventID"]] = Rejected(
                     event_id=record["eventID"], store=str(record["dynamodb"].get("Keys", {}).get("store", {}).get("S")),
                     currency="", reason="; ".join(problems(e)))
                 continue
-        if record["eventName"] == "REMOVE":
-            seen.add(record["eventID"])
-            continue
-        item = record["dynamodb"]["NewImage"]
-        store, price = item["store"]["S"], float(item["price"]["N"])     # without validation: KeyError or ValueError
+            store, price, currency = u.store, u.price, u.currency    # from here on only the parsed fields are used
+            observed = u.observed_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+        else:
+            item = record["dynamodb"]["NewImage"]                    # without the check: KeyError or ValueError
+            store, price = item["store"]["S"], float(item["price"]["N"])
+            currency, observed = item["currency"]["S"], item["observed_at"]["S"]
         seen.add(record["eventID"])
-        if item["currency"]["S"] != "CAD":
+        if currency != "CAD":
             SINK.rejected[record["eventID"]] = Rejected(event_id=record["eventID"], store=store,
-                                                        currency=item["currency"]["S"], reason="the table holds CAD only")
+                                                        currency=currency, reason="the table holds CAD only")
             continue
-        if item["observed_at"]["S"] < start:                         # late: it belongs to an earlier window
+        if observed < start:                                         # late: it belongs to an earlier window
             SINK.corrections[record["eventID"]] = Correction(
-                event_id=record["eventID"], store=store, window_start=window_start(item["observed_at"]["S"]), price=price)
+                event_id=record["eventID"], store=store, window_start=window_start(observed), price=price)
             continue
         s = stores.setdefault(store, {"count": 0, "sum": 0.0})
         s["count"], s["sum"] = s["count"] + 1, round(s["sum"] + price, 2)

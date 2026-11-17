@@ -6,7 +6,9 @@ played faster than real time (SPEED). Two numbers come out:
 
     latency     real time of one query against the local store (p50, p99)
     staleness   for an answer that is no longer the latest price: query time minus the event time (observed_at) of
-                the first newer update the answer misses. 0 when the answer is the latest price.
+                the first newer update the answer misses. 0 when the answer is the latest price. (Query time minus
+                the event time of the returned price would measure how long ago a price last changed, which is
+                long for any product that is not being repriced.)
 
 The requirement: no answer is stale by more than the window (300 s). It holds when the handler keeps up. With
 --handler-delay 4 the handler needs 4 s for each update, falls behind during the burst of store north, and the
@@ -73,14 +75,17 @@ class LoadReport(BaseModel):
     p99_ms: float
     stale_answers: int
     max_staleness_s: float
+    max_handler_lag_s: float              # longest time between an update reaching the stream and being applied
     window_s: int = WINDOW_S
     within_window: bool
 
     def line(self) -> str:
-        verdict = "within the window" if self.within_window else "OLDER THAN THE WINDOW: the handler is behind"
-        return (f"{self.users} users, {self.queries} queries, {self.updates_applied} updates applied: "
-                f"p50 {self.p50_ms:.3f} ms, p99 {self.p99_ms:.3f} ms; largest staleness {self.max_staleness_s:.0f} s "
-                f"(window {self.window_s} s): {verdict}")
+        behind = (f"the handler is behind by up to {self.max_handler_lag_s:.0f} s" if self.max_handler_lag_s > 30
+                  else "updates reached the stream late")
+        verdict = "within the window" if self.within_window else f"OLDER THAN THE WINDOW: {behind}"
+        return (f"{self.users} users, {self.queries} queries, {self.updates_applied} updates applied\n"
+                f"latency p50 {self.p50_ms:.3f} ms, p99 {self.p99_ms:.3f} ms (in-memory store)\n"
+                f"largest staleness {self.max_staleness_s:.0f} s, window {self.window_s} s: {verdict}")
 
 
 def load_updates(start_s: int, minutes: int) -> list[PriceUpdate]:
@@ -104,7 +109,7 @@ async def run(users: int = 50, start_s: int = 20 * 60, minutes: int = 10, handle
     for u in updates:
         by_item.setdefault((u.product_code, u.store), []).append(u)
     keys = sorted(by_item)
-    latencies, staleness, applied = [], [], 0
+    latencies, staleness, lags, applied = [], [], [0.0], 0
 
     async def handler() -> None:
         """Applies the updates in stream order, each when it has reached the stream, one after another."""
@@ -116,6 +121,7 @@ async def run(users: int = 50, start_s: int = 20 * 60, minutes: int = 10, handle
             if handler_delay_s:
                 await asyncio.sleep(handler_delay_s / speed)             # the time the handler needs for one update
             applied += await store.put_if_newer(u)
+            lags.append(now() - (u.created_at - HOUR))
 
     async def user(n: int) -> None:
         r = random.Random(f"{seed}:user:{n}")
@@ -137,7 +143,8 @@ async def run(users: int = 50, start_s: int = 20 * 60, minutes: int = 10, handle
     worst = max(staleness)
     return LoadReport(users=users, queries=len(lat), updates_applied=applied, p50_ms=statistics.median(lat),
                       p99_ms=lat[int(len(lat) * 0.99) - 1], stale_answers=sum(s > 0 for s in staleness),
-                      max_staleness_s=round(worst, 1), within_window=worst <= WINDOW_S)
+                      max_staleness_s=round(worst, 1), max_handler_lag_s=round(max(lags), 1),
+                      within_window=worst <= WINDOW_S)
 
 
 if __name__ == "__main__":

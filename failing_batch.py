@@ -13,7 +13,9 @@ invocation fails. With these settings on the event source mapping:
 Lambda developer guide: services-dynamodb-errors ("Retain discarded records for a DynamoDB event source"),
 services-ddb-batchfailurereporting ("Bisecting a batch"); API reference: UpdateEventSourceMapping. With the
 default settings a bad record can block its shard for up to one day (services-dynamodb-errors).
-Assumed, not read in the documentation: the order in which the two halves are retried (here: in stream order).
+Assumed, not read in the documentation: the order in which the two halves are retried (here: in stream order);
+that with MaximumRetryAttempts = 0 a single record that fails is discarded after that one invocation; and that
+the state of a tumbling window is kept from the last successful invocation when one fails.
 
 The state of a tumbling window comes back only from an invocation that succeeds, so a failed invocation leaves
 no count behind; the records before the bad one are applied when their half succeeds, once. A later delivery of
@@ -40,10 +42,10 @@ class BisectReport(BaseModel):
     counted_twice: int
 
     def line(self) -> str:
-        f = self.failures[0] if self.failures else {}
-        return (f"batch of 8: invocations {' '.join(self.invocations)}; {self.applied} records applied once, "
-                f"{len(self.failures)} sent aside (sequence number ...{str(f.get('startSequenceNumber'))[-4:]}); "
-                f"delivered again: {self.counted_twice} counted twice")
+        seq = self.failures[0]["DDBStreamBatchInfo"]["startSequenceNumber"] if self.failures else ""
+        return (f"invocations (batch size:outcome)  {' '.join(self.invocations)}\n"
+                f"applied once: {self.applied}   sent aside: {len(self.failures)} (sequence number ...{seq[-6:]})   "
+                f"counted twice after a second delivery: {self.counted_twice}")
 
 
 def deliver(records: list[dict], event: dict, state: dict, report: BisectReport, options: dict) -> dict:
@@ -57,9 +59,12 @@ def deliver(records: list[dict], event: dict, state: dict, report: BisectReport,
         report.invocations.append(f"{len(records)}:{type(e).__name__}")
         if len(records) == 1:
             seq = records[0]["dynamodb"]["SequenceNumber"]
-            report.failures.append({"startSequenceNumber": seq, "endSequenceNumber": seq, "batchSize": 1,
-                                    "shardId": event["shardId"], "streamArn": event["eventSourceARN"],
-                                    "condition": "RetryAttemptsExhausted"})
+            # the invocation record for an SQS or SNS destination (services-dynamodb-errors, example), cut to
+            # these fields: it describes the batch; "the actual records aren't included"
+            report.failures.append({"requestContext": {"condition": "RetryAttemptsExhausted", "approximateInvokeCount": 1},
+                                    "DDBStreamBatchInfo": {"shardId": event["shardId"], "startSequenceNumber": seq,
+                                                           "endSequenceNumber": seq, "batchSize": 1,
+                                                           "streamArn": event["eventSourceARN"]}})
             return state
         half = len(records) // 2
         state = deliver(records[:half], event, state, report, options)
@@ -82,6 +87,6 @@ def run(validate: bool = False) -> BisectReport:
 if __name__ == "__main__":
     print(run().line())
     checked = run(validate=True)
-    print(f"with the input check: invocations {' '.join(checked.invocations)}; {checked.applied} applied, "
-          f"{len(stream_window.SINK.rejected)} rejected at the boundary "
-          f"({next(iter(stream_window.SINK.rejected.values())).reason}), 0 sent aside")
+    print(f"with the input check:             {' '.join(checked.invocations)}\n"
+          f"applied once: {checked.applied}   rejected at the boundary: {len(stream_window.SINK.rejected)} "
+          f"({next(iter(stream_window.SINK.rejected.values())).reason})   sent aside: 0")

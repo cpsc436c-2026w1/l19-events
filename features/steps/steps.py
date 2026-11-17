@@ -406,7 +406,7 @@ def step_applied(context, n):
 @then("{n:d} record is in the failure list, with its sequence number and without its content")
 def step_failure_list(context, n):
     f = context.report.failures
-    assert len(f) == n and f[0]["startSequenceNumber"].isdigit() and "NewImage" not in json.dumps(f)
+    assert len(f) == n and f[0]["DDBStreamBatchInfo"]["startSequenceNumber"].isdigit() and "NewImage" not in json.dumps(f)
 
 
 @then("{n:d} records are in the failure list")
