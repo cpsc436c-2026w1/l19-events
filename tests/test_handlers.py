@@ -141,9 +141,9 @@ def _triage(case, mode="stub", caps=None, store=None):
 def test_agent_names_the_cause_and_code_confirms_it(case):
     r, trace = _triage(case)
     assert (r.decided_by, r.cause, r.verified, r.fix) == ("agent", AGENT_CASES[case][1], True, "ask_upstream")
-    assert [t["tool"] for t in trace if "tool" in t] == ["rows_per_product", "rows_per_product", "export_log",
-                                                         "product_categories"]
-    assert r.model_calls == 5 and r.tool_calls == 4 and not r.stopped and r.evidence
+    assert [t["tool"] for t in trace if "tool" in t] == ["file_overview", "file_overview", "products_per_category",
+                                                         "usual_per_category", "export_log"]
+    assert r.model_calls == 6 and r.tool_calls == 5 and not r.stopped and r.evidence
 
 
 @pytest.mark.parametrize("case", list(AGENT_CASES))
@@ -171,6 +171,8 @@ def test_a_cause_the_data_does_not_show_is_refused():
 def test_runaway_model_is_stopped_by_the_caps():
     r, _ = _triage("half-file", "stub-runaway", caps=(5, 4, 60))
     assert r.model_calls <= 5 and r.tool_calls == 4 and r.stopped
+    r, _ = _triage("half-file", "stub-runaway")
+    assert (r.model_calls, r.tool_calls) == (12, 10) and r.stopped
     assert (r.cause, r.verified, r.fix) == (None, False, "escalate")
 
 
@@ -187,16 +189,20 @@ def test_agent_tools_return_stored_data_only():
     lake = LocalLake("half-file")
     before = {p: p.read_bytes() for p in lake.folder.rglob("*") if p.is_file()}
     tools = {t.tool_name: t for t in half_file_agent.make_tools(lake, "prices_raw/day=2026-10-31/centre-export.csv", "centre")}
-    assert list(tools) == ["rows_per_product", "list_files", "export_log", "product_categories"]
-    assert set(tools["rows_per_product"](day="2026-10-31")) == {"store", "day", "rows"}
-    assert set(tools["rows_per_product"](day="2026-10-30")["rows"]) > set(tools["rows_per_product"](day="2026-10-31")["rows"])
-    assert "error" in tools["rows_per_product"](day="2026-10-23")
+    assert list(tools) == ["file_overview", "products_per_category", "usual_per_category", "list_files", "export_log"]
+    assert set(tools["file_overview"](day="2026-10-31")) == {"store", "day", "rows", "products", "first_product_code",
+                                                             "last_product_code"}
+    per = tools["products_per_category"](day="2026-10-31")["products_per_category"]
+    assert len(per) == 26 and sum(per.values()) == 205 and all(isinstance(n, int) for n in per.values())
+    assert sum(tools["usual_per_category"]()["median_products_per_category"].values()) == 411
+    assert "error" in tools["file_overview"](day="2026-10-23") and "error" in tools["products_per_category"](day="x")
+    for t in tools.values():                                  # no flag, no verdict, no comparison in any result
+        out = t(day="2026-10-31") if "day" in t.tool_spec["inputSchema"]["json"].get("properties", {}) else t()
+        assert not any(isinstance(v, bool) for v in out.values()) and len(json.dumps(out)) < 1500
+        assert not ({"missing", "cause", "verdict", "usual", "difference"} & set(out))
     listing = tools["list_files"]()["Contents"]
     assert len(listing) == 8 and all(set(o) == {"Key", "Size", "LastModified"} and "centre" in o["Key"] for o in listing)
-    assert set(tools["export_log"]()) == {"lines"} and set(tools["product_categories"]()) == {"categories"}
-    for name in ("list_files", "export_log", "product_categories"):
-        assert tools[name].tool_spec["inputSchema"]["json"].get("properties", {}) == {}
-    assert all(len(json.dumps(t(day="2026-10-31") if n == "rows_per_product" else t())) < 12000 for n, t in tools.items())
+    assert set(tools["export_log"]()) == {"lines"}
     assert before == {p: p.read_bytes() for p in lake.folder.rglob("*") if p.is_file()}
     src = inspect.getsource(half_file_agent.verify)
     assert "make_tools" not in src and "evidence" not in src.split('"""')[2]

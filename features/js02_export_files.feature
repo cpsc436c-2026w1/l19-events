@@ -56,7 +56,7 @@ Feature: The night's export files
     When the agent triages the held file of store <store>
     Then the cause is "<cause>" and code confirms it
     And the proposed fix is "ask_upstream"
-    And the agent made at most 8 model calls and 6 tool calls
+    And the agent made at most 12 model calls and 10 tool calls
 
     Examples:
       | night            | store  | cause            |
@@ -68,7 +68,7 @@ Feature: The night's export files
     Given the simulator delivers the export files of the night "half-file"
     And the agent's model is the stub "stub-runaway"
     When the agent triages the held file of store centre
-    Then the agent made at most 8 model calls and 6 tool calls
+    Then the agent made at most 12 model calls and 10 tool calls
     And the run was stopped by the app
     And the proposed fix is "escalate"
 

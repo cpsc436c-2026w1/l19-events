@@ -9,8 +9,8 @@ The path for one S3 event record (L18 triage/agent.py, moved to the file's arriv
     4. a person         reads the cause, the evidence and the proposed fix; nothing here changes a file or the job
 
 Controls (L18 with_strands/hooks.py): CallCap counts model calls and tool calls in a hook and holds a deadline;
-the tools read one thing each for the one store of the event and return it as stored, without a comparison or a
-conclusion; `verify` reads the data itself, not the tools' results; file contents and log lines are data.
+the tools read one thing each for the one store of the event and return a small summary of it, without a
+comparison between days or a conclusion; `verify` reads the data itself, not the tools' results; file contents and log lines are data.
 
     uv run python half_file_agent.py                          # stub model, the half-file case
     uv run python half_file_agent.py --case category-missing
@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import statistics
 import time
 from typing import get_args
 
@@ -32,10 +33,9 @@ from local import LocalLake, object_key
 from models import StubAgentModel, gateway_model, parse_json
 from results import FIXES, Cause, FileVerdict, TriageResult
 
-MAX_MODEL_CALLS = 8
-MAX_TOOL_CALLS = 6
-DEADLINE_S = 180          # as L18. The live eval of 2026-11-17 ran out of it on one case after 4 model calls
-                          # (output/eval-live/): a live run needs more; no larger value has been tested
+MAX_MODEL_CALLS = 12
+MAX_TOOL_CALLS = 10       # L18's triage value
+DEADLINE_S = 300          # 180 s (L18) ended one live case before its answer (output/eval-live/, 2026-11-17)
 CAUSES = get_args(Cause)
 
 AGENT_PROMPT = f"""You triage one export file that a check held before the nightly job reads it. Each store
@@ -101,23 +101,55 @@ class CallCap(HookProvider):
 
 
 def make_tools(lake: LocalLake, key: str, store: str) -> list:
-    """Four read-only tools for the one store of the event. Each returns what is stored, as it is: no totals,
-    no comparison and no conclusion. The store comes from the event, not from the model."""
+    """Five read-only tools for the one store of the event. Each returns a small summary of what is stored (a
+    count, a first and last code, a median): no comparison between days and no conclusion. The store comes from
+    the event, not from the model."""
     day = key.split("day=")[1].split("/")[0]
     days = [d["day"] for d in lake.baseline(store)["days"]] + [day]
+    category = {code: c for c, codes in lake.product_categories().items() for code in codes}
+
+    def per_category(d: str) -> dict[str, int]:
+        out = {c: 0 for c in sorted(lake.product_categories())}
+        for code in lake.rows_per_product(store, d):
+            out[category[code]] += 1
+        return out
+
+    def refused(d: str) -> dict | None:
+        if d not in days or lake.rows_per_product(store, d) is None:
+            return {"error": f"files of store {store} are kept for {days[0]} to {days[-1]}"}
+        return None
 
     @tool
-    def rows_per_product(day: str) -> dict:
-        """The store's export file of one day, as a map from product code to the number of rows the file holds
-        for it, in the file's order (sorted by product code). A product that is not in the file is not in the map.
+    def file_overview(day: str) -> dict:
+        """The store's export file of one day: number of rows, number of products, and the first and last product
+        code in it (the rows are sorted by product code).
 
         Args:
             day: YYYY-MM-DD, the day of the held file or one of the 7 days before
         """
-        rows = lake.rows_per_product(store, day) if day in days else None
-        if rows is None:
-            return {"error": f"files of store {store} are kept for {days[0]} to {days[-1]}"}
-        return {"store": store, "day": day, "rows": rows}
+        if refused(day):
+            return refused(day)
+        rows = lake.rows_per_product(store, day)
+        codes = list(rows)
+        return {"store": store, "day": day, "rows": sum(rows.values()), "products": len(codes),
+                "first_product_code": codes[0], "last_product_code": codes[-1]}
+
+    @tool
+    def products_per_category(day: str) -> dict:
+        """The store's export file of one day: how many products of each product category are in it.
+
+        Args:
+            day: YYYY-MM-DD, the day of the held file or one of the 7 days before
+        """
+        return refused(day) or {"store": store, "day": day, "products_per_category": per_category(day)}
+
+    @tool
+    def usual_per_category() -> dict:
+        """The store's files of the 7 days before the held file: the median number of products of each product
+        category in a file."""
+        earlier = [per_category(d) for d in days[:-1]]
+        return {"store": store, "days": days[:-1], "median_products_per_category": {
+            c: int(statistics.median(e[c] for e in earlier)) for c in earlier[0]}}
 
     @tool
     def list_files() -> dict:
@@ -133,12 +165,7 @@ def make_tools(lake: LocalLake, key: str, store: str) -> list:
         """The lines the store's export wrote to its log for the held file."""
         return {"lines": lake.export_log(store)}
 
-    @tool
-    def product_categories() -> dict:
-        """The products table: each product category with the product codes in it."""
-        return {"categories": lake.product_categories()}
-
-    return [rows_per_product, list_files, export_log, product_categories]
+    return [file_overview, products_per_category, usual_per_category, list_files, export_log]
 
 
 def verify(cause: str, v: FileVerdict, lake: LocalLake) -> bool:
@@ -196,6 +223,8 @@ def triage(key: str, arrived_at: str, lake: LocalLake, model, caps: tuple[int, i
         reply, cap.stopped = "", cap.stopped or f"{type(e).__name__}: {str(e)[:160]}"
     if trace is not None:
         trace.extend(cap.trace)
+        if isinstance(getattr(model, "calls", None), list):   # per model call: max_tokens sent, output tokens, stop reason
+            trace.append({"model_calls": list(model.calls)})
         trace.append({"reply": reply[-1500:]})
     answer = parse_json(reply)
     cause = answer.get("cause") if answer.get("cause") in CAUSES else None
@@ -218,8 +247,8 @@ def handler(event: dict, context=None) -> list[dict]:
 def stub_model(mode: str = "stub", day: str = "2026-10-31", day_before: str = "2026-10-30") -> StubAgentModel:
     """A model with fixed behaviour, for tests and offline runs.
 
-    stub          reads the held file, the file of the day before, the export log and the products table, then
-                  compares them and names a cause
+    stub          reads the overview of the held file and of the day before, the products per category, their
+                  usual numbers and the export log, then compares them and names a cause
     stub-wrong    the same reads, then names a cause the data does not show
     stub-outside  first asks for a day outside the 8 days the tool serves, then goes on as stub
     stub-runaway  never stops calling tools
@@ -227,24 +256,27 @@ def stub_model(mode: str = "stub", day: str = "2026-10-31", day_before: str = "2
     def answer(results: list[tuple[str, dict]]) -> str:
         if mode == "stub-wrong":
             return json.dumps({"cause": "late_arrival", "evidence": ["the file arrived late"]})
-        files = {r["day"]: list(r["rows"]) for name, r in results if name == "rows_per_product" and "rows" in r}
-        cats = next((r["categories"] for name, r in results if name == "product_categories"), {})
+        over = {r["day"]: r for name, r in results if name == "file_overview" and "day" in r}
+        today = next((r["products_per_category"] for name, r in results if name == "products_per_category"), {})
+        usual = next((r["median_products_per_category"] for name, r in results if name == "usual_per_category"), {})
         log = next((r["lines"] for name, r in results if name == "export_log"), [])
-        today, before = files.get(day, []), files.get(day_before, [])
-        missing = [c for c in before if c not in set(today)]
-        evidence = [f"{len(today)} products in the file of {day}, {len(before)} in the file of {day_before}", *log[1:]]
-        if missing and today == before[:len(today)]:
-            return json.dumps({"cause": "partial_file", "evidence": evidence + [
-                f"the file holds the first {len(today)} product codes and none after {today[-1]}"]})
-        gone = [c for c, codes in cats.items() if set(codes) & set(missing)]
-        if gone and all(set(cats[c]) <= set(missing) for c in gone):
+        absent = [c for c in usual if usual[c] and today.get(c, 0) == 0]
+        fewer = [c for c in usual if 0 < today.get(c, 0) < usual[c]]
+        a, b = over.get(day, {}), over.get(day_before, {})
+        evidence = [f"{a.get('products')} products in the file of {day}, {b.get('products')} in the file of {day_before}",
+                    *log[1:]]
+        if absent and not fewer:
             return json.dumps({"cause": "category_missing", "evidence": evidence + [
-                f"all {len(missing)} missing products are of category {', '.join(gone)}"]})
+                f"no product of category {', '.join(absent)}; every other category has its usual number"]})
+        if fewer and a.get("last_product_code", "") < b.get("last_product_code", ""):
+            return json.dumps({"cause": "partial_file", "evidence": evidence + [
+                f"the last product code is {a['last_product_code']}, earlier files end at {b['last_product_code']}; "
+                f"{len(fewer)} categories have fewer products than usual"]})
         return json.dumps({"cause": "other", "evidence": evidence})
-    reads = [("rows_per_product", {"day": day}), ("rows_per_product", {"day": day_before}), ("export_log", {}),
-             ("product_categories", {})]
+    reads = [("file_overview", {"day": day}), ("file_overview", {"day": day_before}), ("products_per_category", {"day": day}),
+             ("usual_per_category", {}), ("export_log", {})]
     if mode == "stub-outside":
-        reads.insert(0, ("rows_per_product", {"day": "2026-09-01"}))
+        reads.insert(0, ("file_overview", {"day": "2026-09-01"}))
     return StubAgentModel(reads, answer, runaway=mode == "stub-runaway")
 
 

@@ -41,8 +41,29 @@ def gateway_model(model_id: str = DEFAULT_MODEL, max_tokens: int = MAX_TOKENS):
     """The course LLM gateway as a Strands model (as L18 with_strands/models.py)."""
     from strands.models.openai import OpenAIModel
 
-    return OpenAIModel(client_args={"api_key": token(), "base_url": gateway_url(), "timeout": 300, "max_retries": 0},
-                       model_id=model_id, params={"max_tokens": max_tokens, **sampling(model_id)})
+    class Logged(OpenAIModel):
+        """Keeps, per model call, the max_tokens the request carries and the output tokens and stop reason that
+        come back: `calls` shows whether a reply ended at a limit, and at which."""
+
+        calls: list[dict]
+
+        def format_request(self, *args, **kwargs):
+            request = super().format_request(*args, **kwargs)
+            self.calls.append({"max_tokens_sent": request.get("max_tokens"), "model": request.get("model")})
+            return request
+
+        async def stream(self, *args, **kwargs):
+            async for event in super().stream(*args, **kwargs):
+                if "messageStop" in event and self.calls:
+                    self.calls[-1]["stop_reason"] = event["messageStop"].get("stopReason")
+                if "metadata" in event and self.calls:
+                    self.calls[-1]["output_tokens"] = event["metadata"].get("usage", {}).get("outputTokens")
+                yield event
+
+    model = Logged(client_args={"api_key": token(), "base_url": gateway_url(), "timeout": 300, "max_retries": 0},
+                   model_id=model_id, params={"max_tokens": max_tokens, **sampling(model_id)})
+    model.calls = []
+    return model
 
 
 def gateway_chat(model_id: str = DEFAULT_MODEL, max_tokens: int = MAX_TOKENS) -> Callable[[str, str], str]:
