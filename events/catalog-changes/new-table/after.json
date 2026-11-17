@@ -1,0 +1,35 @@
+{
+ "Table": {
+  "DatabaseName": "l18_storeplan",
+  "Name": "price_window_counts",
+  "PartitionKeys": [],
+  "StorageDescriptor": {
+   "Columns": [
+    {
+     "Comment": "",
+     "Name": "store",
+     "Type": "string"
+    },
+    {
+     "Comment": "",
+     "Name": "window_start",
+     "Type": "timestamp"
+    },
+    {
+     "Comment": "",
+     "Name": "updates",
+     "Type": "bigint"
+    },
+    {
+     "Comment": "",
+     "Name": "avg_price_cad",
+     "Type": "double"
+    }
+   ],
+   "Location": "s3://lake/price_window_counts/"
+  },
+  "TableType": "EXTERNAL_TABLE",
+  "UpdateTime": "2026-11-02T09:30:00Z",
+  "VersionId": "0"
+ }
+}

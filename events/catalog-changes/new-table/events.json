@@ -1,0 +1,21 @@
+[
+ {
+  "account": "123456789012",
+  "detail": {
+   "changedTables": [
+    "price_window_counts"
+   ],
+   "databaseName": "l18_storeplan",
+   "typeOfChange": "CreateTable"
+  },
+  "detail-type": "Glue Data Catalog Database State Change",
+  "id": "ddfc13e0-e784-f54b-f277-f50e4508a1f6",
+  "region": "us-west-2",
+  "resources": [
+   "arn:aws:glue:us-west-2:123456789012:database/l18_storeplan"
+  ],
+  "source": "aws.glue",
+  "time": "2026-11-02T09:30:00Z",
+  "version": "0"
+ }
+]

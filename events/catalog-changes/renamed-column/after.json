@@ -1,0 +1,50 @@
+{
+ "Table": {
+  "DatabaseName": "l18_storeplan",
+  "Name": "prices_raw",
+  "PartitionKeys": [],
+  "StorageDescriptor": {
+   "Columns": [
+    {
+     "Comment": "id of the observation (large, unique)",
+     "Name": "obs_id",
+     "Type": "string"
+    },
+    {
+     "Comment": "product code",
+     "Name": "product_code",
+     "Type": "string"
+    },
+    {
+     "Comment": "north, centre or online",
+     "Name": "store",
+     "Type": "string"
+    },
+    {
+     "Comment": "day of the observation (DATE)",
+     "Name": "observed_on",
+     "Type": "date"
+    },
+    {
+     "Comment": "price in the store's currency",
+     "Name": "unit_price",
+     "Type": "double"
+    },
+    {
+     "Comment": "CAD or EUR",
+     "Name": "currency",
+     "Type": "string"
+    },
+    {
+     "Comment": "receipt reference (large, unique)",
+     "Name": "source",
+     "Type": "string"
+    }
+   ],
+   "Location": "s3://lake/prices_raw/"
+  },
+  "TableType": "EXTERNAL_TABLE",
+  "UpdateTime": "2026-10-30T16:40:00Z",
+  "VersionId": "7"
+ }
+}

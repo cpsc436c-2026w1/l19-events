@@ -1,0 +1,73 @@
+{
+ "PartitionValues": [
+  [
+   "2026-01"
+  ],
+  [
+   "2026-02"
+  ],
+  [
+   "2026-03"
+  ],
+  [
+   "2026-04"
+  ],
+  [
+   "2026-05"
+  ],
+  [
+   "2026-06"
+  ],
+  [
+   "2026-07"
+  ],
+  [
+   "2026-08"
+  ],
+  [
+   "2026-09"
+  ],
+  [
+   "2026-10"
+  ]
+ ],
+ "Table": {
+  "DatabaseName": "l18_storeplan",
+  "Name": "prices_curated",
+  "PartitionKeys": [
+   {
+    "Comment": "partition column, YYYY-MM",
+    "Name": "month",
+    "Type": "string"
+   }
+  ],
+  "StorageDescriptor": {
+   "Columns": [
+    {
+     "Comment": "product code",
+     "Name": "product_code",
+     "Type": "string"
+    },
+    {
+     "Comment": "north, centre or online",
+     "Name": "store",
+     "Type": "string"
+    },
+    {
+     "Comment": "day of the price (DATE)",
+     "Name": "observed_on",
+     "Type": "date"
+    },
+    {
+     "Comment": "price in CAD",
+     "Name": "price_cad",
+     "Type": "double"
+    }
+   ],
+   "Location": "s3://lake/prices_curated/"
+  },
+  "TableType": "EXTERNAL_TABLE",
+  "UpdateTime": "2026-09-02T10:11:00Z",
+  "VersionId": "3"
+ }
+}

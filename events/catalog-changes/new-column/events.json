@@ -1,0 +1,19 @@
+[
+ {
+  "account": "123456789012",
+  "detail": {
+   "databaseName": "l18_storeplan",
+   "tableName": "prices_raw",
+   "typeOfChange": "UpdateTable"
+  },
+  "detail-type": "Glue Data Catalog Table State Change",
+  "id": "13c3ad49-4365-8686-4243-0e4509333e03",
+  "region": "us-west-2",
+  "resources": [
+   "arn:aws:glue:us-west-2:123456789012:table/l18_storeplan/prices_raw"
+  ],
+  "source": "aws.glue",
+  "time": "2026-11-02T10:00:00Z",
+  "version": "0"
+ }
+]

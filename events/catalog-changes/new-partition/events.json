@@ -1,0 +1,22 @@
+[
+ {
+  "account": "123456789012",
+  "detail": {
+   "changedPartitions": [
+    "2026-11"
+   ],
+   "databaseName": "l18_storeplan",
+   "tableName": "prices_curated",
+   "typeOfChange": "CreatePartition"
+  },
+  "detail-type": "Glue Data Catalog Table State Change",
+  "id": "1fb46351-4980-b09e-7237-bf04d32b52cf",
+  "region": "us-west-2",
+  "resources": [
+   "arn:aws:glue:us-west-2:123456789012:table/l18_storeplan/prices_curated"
+  ],
+  "source": "aws.glue",
+  "time": "2026-11-01T02:06:51Z",
+  "version": "0"
+ }
+]

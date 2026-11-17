@@ -1,0 +1,686 @@
+{
+ "cases": [
+  {
+   "facts": {
+    "event_ids": [],
+    "records": 133
+   },
+   "files": [
+    "events/price-updates/records.jsonl",
+    "events/price-updates/truth.json"
+   ],
+   "id": "normal-update",
+   "kind": "price-updates",
+   "planted": false,
+   "what": "133 updates written within 3 s of the price change (3 of them a product new to store online)."
+  },
+  {
+   "facts": {
+    "event_ids": [
+     "f5debfb6bb7b76773121047e0c8fc364",
+     "7928bcdb1f707067b6ddbe1e7c888be5",
+     "230cd3bea58ac63875ea7c36b89348c3",
+     "2cf734a158cfe9516bc1b12365bbce88"
+    ],
+    "records": 4
+   },
+   "files": [
+    "events/price-updates/records.jsonl",
+    "events/price-updates/truth.json"
+   ],
+   "id": "redelivered-update",
+   "kind": "price-updates",
+   "planted": true,
+   "what": "4 records delivered a second time: same eventID and SequenceNumber."
+  },
+  {
+   "facts": {
+    "event_ids": [
+     "77f52090cdbb96f49a63ce8bebe80a66",
+     "97870e64eea5601c425e6e8138f1b094",
+     "577f07f341d718270173dd3049af2cbd",
+     "6b5d957c9e27b42939ebbef68806b48f"
+    ],
+    "records": 4
+   },
+   "files": [
+    "events/price-updates/records.jsonl",
+    "events/price-updates/truth.json"
+   ],
+   "id": "late-update",
+   "kind": "price-updates",
+   "planted": true,
+   "what": "4 updates of store centre observed from 09:10 to 09:15 and written after 09:16, in the next window."
+  },
+  {
+   "facts": {
+    "event_ids": [
+     "a1389d609b8be4cb38e863f2877a2438"
+    ],
+    "records": 1
+   },
+   "files": [
+    "events/price-updates/records.jsonl",
+    "events/price-updates/truth.json"
+   ],
+   "id": "eur-update",
+   "kind": "price-updates",
+   "planted": true,
+   "what": "One update of store online with currency EUR and the EUR amount; the table holds CAD."
+  },
+  {
+   "facts": {
+    "event_ids": [
+     "47795678b8d08ec79f7f9edfe133fcf4",
+     "14eed82666baa88679f70205d5fc7bb9",
+     "d481dfe43b327e6b92cf8e10c76724e8",
+     "d88429079660a718cd371c3ab7a9960a",
+     "8783676bdd3ff9404d7f522c2bc14133",
+     "68a3ab367395864a4908e49c5d38254d",
+     "c891a436c12efe76eb2df619ad92c4df",
+     "74264cae72e906f74848c0cbfbccd6eb",
+     "9c7126eb0e78f01a28f28c4ee70ebf92",
+     "4091a725fbae8d83eb419086beb3a65a",
+     "25157d17dd2deae1b1ca1a641b3d8f9d",
+     "b3958531450502a77294a61b9973528a",
+     "d95112845727a742d7ea1266806e1072",
+     "3b415112435e62b3560f54285abe40b8",
+     "8ca6f9659141372be831dabe16345b05",
+     "3c828082b704ee02569269e884057fc4",
+     "302c22b0a6d5a5c41922783910112f6c",
+     "80be64079b4949efbd475001e9c597ef",
+     "76dbd571a5b4b473247171d2c866a87d",
+     "2e3b38c79ae75a065562efb47359c45d",
+     "a808a2d67cd52454d03afdeb578302e1",
+     "887dfaeb7e42bd9766184ccb77463c5e",
+     "ec69f83b81c0fc9bfb92b4e49ea4ed0f",
+     "ecea1a3faa2b04ada63e19927389b6ff",
+     "e61a22822add7bfe0443f39b4467b820",
+     "31a0dae1f3a554ebb38c09159a40c94a",
+     "88e8662c2e1ded1f671e9e670270b7f8",
+     "5ec865653a9ea3ba97e7ee7db50a685f",
+     "1f1d4fd91d4432ce377bf5a7dfd7b780",
+     "7ee273692506fbda03743b01607e20b3",
+     "f7a94f0ef818bd31e807c5c0fd04d2ab",
+     "18405181fbbc0675aa88d671573c552f",
+     "e0112682eb8786be017bb7a45269e535",
+     "51efeb8d67257ed4a30e555bf332c613",
+     "c600f96732df01977a191a1192458a20",
+     "37ce63d19b6c8720e4927b2bb83d32b8",
+     "fd41c0fb53ac0c876b75318353d31250",
+     "f8f6deb3a64ffcf37cc35c9bfff3a558",
+     "2e1423687c07696f90aa100b7945ecce",
+     "03d56fa9cff5f6584db825f07202ef2b",
+     "f99d5543afcce425d8de84a251cc1f88",
+     "e22b9e37041eca08c9a513dcaaab493b",
+     "8cfc035f6ab5d4bc2c81433ed683cacf",
+     "bbedc8d7466752ec59b29f1676bf1b5f",
+     "6b1958980aca3beca013b9d37883f525",
+     "6a98c43a6eb37ed6bdf07d1c91f3d87d",
+     "fa45a89112e32c4ebd4fc87f66e2d309",
+     "2ab93cf6f7e1e7caf9b1337b38daae51",
+     "e946edc6f9d42596cf14a90700236ec2",
+     "055e4868efcfe8fee11f890c0ae01176",
+     "5021940ac5c3d51eb4ef19d64fe58b74",
+     "29dd679e504fb94ecb31f5c3229db3f4",
+     "3728d8294bc2a2e76b85e4b44844a271",
+     "eb82f328d36ab133b6e56cf04d8bbf83",
+     "95a72c0f661068117b521c41c5846d39",
+     "3a6a206e919002acec019e66ef2687c3",
+     "10b5a383d330c42b0c53b3693c81daa7",
+     "2f0874b24c3fd09623b98f0262687473",
+     "17a7e0e3e393118b2123cd0ad3d6de5b",
+     "231674d285860999786785108123fbb6",
+     "42b784d18356ab6ff43644996306e119",
+     "7b3947cf25187e70409e50379d9886ce",
+     "b562f0ca4f60dff4f0c853784c7e32c5",
+     "b99f4ad86486cc006bc94f54c5399b85",
+     "383c6a713afc33bc2a903bf1f0b64153",
+     "04ed0be88cf8b58439259194e34fb66b",
+     "51f7a392472d921a590eb17ae93c57c2",
+     "c168211472e5c52ff2aacdcddc433763",
+     "b5d4610ab6f306656652666e36c2c6e5",
+     "101560776f32f3e92f16a7807ddc53bd",
+     "9b938a0803819ccaa3993deb0daf6d58",
+     "d6c8389e6145f0ccdd7da280e28b66fe",
+     "80514db84965fa468aaa27ce9177cdff",
+     "da8b9f26ecec5976d3734cc30f6e605d",
+     "ac528eea2f36b7564b5734ce536c2a23",
+     "db06b097f38e928346117ed6a0fcb237",
+     "9708e23adc7c6d5e8c69a67c9e6c4437",
+     "32b6a79afa4ba0603b4ab6d518540b64",
+     "3b19365e68872516b6159f2681fe239c",
+     "12db4f61aebb15456ea9bc11ab38dd9d",
+     "b50a5538431a029983aa5d3796d94021",
+     "fe28be94192bdab7e75813d31fe1b36c",
+     "b88ac48cd50b974d4e83085dda2e1b7b",
+     "00ebb6afa15b19194d8d3fa69f4d36ab",
+     "ff0e12396511a05538cb9b1759e10fce",
+     "a058977a5a823e629542c90f03501ea7",
+     "3fd9b3ef1aafa4acb1a7d578db2aa906",
+     "b9d902bcfc0f8d777acb2a9c96939680",
+     "879965ad0769d5e206257c7ebaae75fc",
+     "a55b7b68b5cf9ac6acb3f20cae1e5e20",
+     "b0ca4d16bdf4edee7c7bc7291c621924",
+     "24b0eff35618927d8b38a6dafad6d886",
+     "14e7e8c304cec342b846d0acf1d712fb",
+     "e6720d7d3cfd0ba66aa39fc4e091a7e4",
+     "f44510ddf043b66f92c7b50bf72c71b6",
+     "1971b113e791bfb5d79e5e47615477e8",
+     "96284dd30d3ac9d2ea0b320a5785945e",
+     "100e6e13ec4fd0129cdbab83cfaf0c11",
+     "6386e807466aa0b9581b1867768cf68f",
+     "aa5e6d7d3b7b0267ac82facf8c7890a4",
+     "d8617ec58d45722f4793fafa67b0f7a3",
+     "0c12e0e834218531b2adb1fc9cfe25f5",
+     "df71e69cadcc6107fcb1901a1e5b6422",
+     "ce16057a2fd30984c4663e1c39a20651",
+     "ffbdcbe4e40c236f411d8f567321a7d0",
+     "8929ec06bb24afa883b4bc008f840181",
+     "83010878d676164ad057dc40fbf3a435",
+     "151dabac4b0db3e11d69982dec9c2080",
+     "6730a887ad8704e3256036ae169ed9a3",
+     "8190a9109a4253ced165e91a00295e4b",
+     "a9a6bacf48fd369b61ce9c2c3bf96cf4",
+     "157fde3444f5b766da72070d7c884ada",
+     "012a44f25f71e4199af96ccb3229d222",
+     "b7e2d48e6250ece5b9b26495c32b8e41",
+     "787b80895f245c947cbf916c07bfa668",
+     "86e4e6ba8e5985a794ca0170d2d07e3d",
+     "26b5679f0092b2458e1e097ec2b89e95",
+     "3c422f46423fd30917baef998ae937a2",
+     "217011655de481f8d196850f4d61c68b",
+     "d067176bebbbb42216c0b9059bc737bf"
+    ],
+    "records": 120
+   },
+   "files": [
+    "events/price-updates/records.jsonl",
+    "events/price-updates/truth.json"
+   ],
+   "id": "store-burst",
+   "kind": "price-updates",
+   "planted": true,
+   "what": "120 updates of store north from 09:20:00 to 09:22:00, each price 10 % lower."
+  },
+  {
+   "facts": {
+    "event_ids": [],
+    "records": 0
+   },
+   "files": [
+    "events/price-updates/records.jsonl",
+    "events/price-updates/truth.json"
+   ],
+   "id": "quiet-windows",
+   "kind": "price-updates",
+   "planted": true,
+   "what": "No update from any store from 09:40 to 09:50: two windows without records."
+  },
+  {
+   "facts": {
+    "events": 3,
+    "job_started_at": "2026-10-31T02:00:04Z",
+    "per_store": {
+     "centre": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:41:10Z",
+      "avg_price": 6.1,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56708
+     },
+     "north": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:40:10Z",
+      "avg_price": 6.17,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56229
+     },
+     "online": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:42:10Z",
+      "avg_price": 4.05,
+      "currencies": [
+       "EUR"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 494,
+      "size": 56805
+     }
+    }
+   },
+   "files": [
+    "events/batch-files/normal-day/s3-events.json",
+    "events/batch-files/normal-day/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/normal-day/prices_raw/day=2026-10-31/centre-export.csv",
+    "events/batch-files/normal-day/prices_raw/day=2026-10-31/online-export.csv"
+   ],
+   "id": "normal-day",
+   "kind": "batch-files",
+   "planted": false,
+   "what": "Three exports arrive before the job starts; rows and prices are in their usual range."
+  },
+  {
+   "facts": {
+    "events": 3,
+    "job_started_at": "2026-10-31T02:00:04Z",
+    "per_store": {
+     "centre": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:41:10Z",
+      "avg_price": 6.1,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 493,
+      "rows": 986,
+      "size": 113356
+     },
+     "north": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:40:10Z",
+      "avg_price": 6.17,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56229
+     },
+     "online": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:42:10Z",
+      "avg_price": 4.05,
+      "currencies": [
+       "EUR"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 494,
+      "size": 56805
+     }
+    }
+   },
+   "files": [
+    "events/batch-files/duplicate-rows/s3-events.json",
+    "events/batch-files/duplicate-rows/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/duplicate-rows/prices_raw/day=2026-10-31/centre-export.csv",
+    "events/batch-files/duplicate-rows/prices_raw/day=2026-10-31/online-export.csv"
+   ],
+   "id": "duplicate-rows",
+   "kind": "batch-files",
+   "planted": true,
+   "what": "Export of store centre holds every row twice: the same obs_id appears two times."
+  },
+  {
+   "facts": {
+    "events": 2,
+    "job_started_at": "2026-10-31T02:00:04Z",
+    "per_store": {
+     "centre": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:41:10Z",
+      "avg_price": 6.1,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56708
+     },
+     "north": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:40:10Z",
+      "avg_price": 6.17,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56229
+     }
+    }
+   },
+   "files": [
+    "events/batch-files/missing-store/s3-events.json",
+    "events/batch-files/missing-store/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/missing-store/prices_raw/day=2026-10-31/centre-export.csv"
+   ],
+   "id": "missing-store",
+   "kind": "batch-files",
+   "planted": true,
+   "what": "Export of store online does not arrive: two files, two events."
+  },
+  {
+   "facts": {
+    "events": 3,
+    "job_started_at": "2026-10-31T02:00:04Z",
+    "per_store": {
+     "centre": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:41:10Z",
+      "avg_price": 6.1,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56708
+     },
+     "north": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:40:10Z",
+      "avg_price": 6.17,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56229
+     },
+     "online": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:42:10Z",
+      "avg_price": 4.05,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 494,
+      "size": 56805
+     }
+    }
+   },
+   "files": [
+    "events/batch-files/not-converted/s3-events.json",
+    "events/batch-files/not-converted/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/not-converted/prices_raw/day=2026-10-31/centre-export.csv",
+    "events/batch-files/not-converted/prices_raw/day=2026-10-31/online-export.csv"
+   ],
+   "id": "not-converted",
+   "kind": "batch-files",
+   "planted": true,
+   "what": "Export of store online is labelled CAD, but its prices are the EUR amounts."
+  },
+  {
+   "facts": {
+    "events": 3,
+    "job_started_at": "2026-10-31T02:00:04Z",
+    "per_store": {
+     "centre": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:41:10Z",
+      "avg_price": 6.24,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 205,
+      "repeated_obs_ids": 0,
+      "rows": 242,
+      "size": 27854
+     },
+     "north": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:40:10Z",
+      "avg_price": 6.17,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56229
+     },
+     "online": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:42:10Z",
+      "avg_price": 4.05,
+      "currencies": [
+       "EUR"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 494,
+      "size": 56805
+     }
+    }
+   },
+   "files": [
+    "events/batch-files/half-file/s3-events.json",
+    "events/batch-files/half-file/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/half-file/prices_raw/day=2026-10-31/centre-export.csv",
+    "events/batch-files/half-file/prices_raw/day=2026-10-31/online-export.csv"
+   ],
+   "id": "half-file",
+   "kind": "batch-files",
+   "planted": true,
+   "what": "Export of store centre stops after half of the products; the file is valid CSV."
+  },
+  {
+   "facts": {
+    "events": 3,
+    "job_started_at": "2026-10-31T02:00:04Z",
+    "per_store": {
+     "centre": {
+      "arrived_after_job_start": true,
+      "arrived_at": "2026-10-31T03:12:40Z",
+      "avg_price": 6.1,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56708
+     },
+     "north": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:40:10Z",
+      "avg_price": 6.17,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56229
+     },
+     "online": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:42:10Z",
+      "avg_price": 4.05,
+      "currencies": [
+       "EUR"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 494,
+      "size": 56805
+     }
+    }
+   },
+   "files": [
+    "events/batch-files/late-file/s3-events.json",
+    "events/batch-files/late-file/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/late-file/prices_raw/day=2026-10-31/centre-export.csv",
+    "events/batch-files/late-file/prices_raw/day=2026-10-31/online-export.csv"
+   ],
+   "id": "late-file",
+   "kind": "batch-files",
+   "planted": true,
+   "what": "Export of store centre arrives at 03:12:40, after the job started at 02:00:04."
+  },
+  {
+   "facts": {
+    "added": [],
+    "events": 1,
+    "removed": [],
+    "retyped": []
+   },
+   "files": [
+    "events/catalog-changes/new-partition/events.json",
+    "events/catalog-changes/new-partition/before.json",
+    "events/catalog-changes/new-partition/after.json"
+   ],
+   "id": "new-partition",
+   "kind": "catalog-changes",
+   "planted": false,
+   "what": "Nightly job writes the first day of November: prices_curated gets partition month=2026-11."
+  },
+  {
+   "facts": {
+    "added": [],
+    "events": 1,
+    "removed": [],
+    "retyped": []
+   },
+   "files": [
+    "events/catalog-changes/new-table/events.json",
+    "events/catalog-changes/new-table/after.json"
+   ],
+   "id": "new-table",
+   "kind": "catalog-changes",
+   "planted": false,
+   "what": "Table price_window_counts is created in the database."
+  },
+  {
+   "facts": {
+    "added": [
+     "on_promotion"
+    ],
+    "events": 1,
+    "removed": [],
+    "retyped": []
+   },
+   "files": [
+    "events/catalog-changes/new-column/events.json",
+    "events/catalog-changes/new-column/before.json",
+    "events/catalog-changes/new-column/after.json"
+   ],
+   "id": "new-column",
+   "kind": "catalog-changes",
+   "planted": true,
+   "what": "prices_raw gets column on_promotion (boolean), without a description."
+  },
+  {
+   "facts": {
+    "added": [],
+    "events": 1,
+    "removed": [],
+    "retyped": [
+     "price"
+    ]
+   },
+   "files": [
+    "events/catalog-changes/type-change/events.json",
+    "events/catalog-changes/type-change/before.json",
+    "events/catalog-changes/type-change/after.json"
+   ],
+   "id": "type-change",
+   "kind": "catalog-changes",
+   "planted": true,
+   "what": "Column price of prices_raw changes from double to string."
+  },
+  {
+   "facts": {
+    "added": [
+     "unit_price"
+    ],
+    "events": 1,
+    "removed": [
+     "price"
+    ],
+    "retyped": []
+   },
+   "files": [
+    "events/catalog-changes/renamed-column/events.json",
+    "events/catalog-changes/renamed-column/before.json",
+    "events/catalog-changes/renamed-column/after.json"
+   ],
+   "id": "renamed-column",
+   "kind": "catalog-changes",
+   "planted": true,
+   "what": "Column price of prices_raw becomes unit_price (the schema change of L18's triage)."
+  },
+  {
+   "facts": {
+    "added": [],
+    "events": 1,
+    "removed": [
+     "source"
+    ],
+    "retyped": []
+   },
+   "files": [
+    "events/catalog-changes/dropped-column/events.json",
+    "events/catalog-changes/dropped-column/before.json",
+    "events/catalog-changes/dropped-column/after.json"
+   ],
+   "id": "dropped-column",
+   "kind": "catalog-changes",
+   "planted": true,
+   "what": "Column source (the receipt reference) is removed from prices_raw."
+  },
+  {
+   "facts": {
+    "added": [
+     "on_promotion"
+    ],
+    "events": 3,
+    "removed": [],
+    "retyped": [
+     "price"
+    ]
+   },
+   "files": [
+    "events/catalog-changes/repeated-event/events.json",
+    "events/catalog-changes/repeated-event/before.json",
+    "events/catalog-changes/repeated-event/after.json",
+    "events/catalog-changes/repeated-event/between.json"
+   ],
+   "id": "repeated-event",
+   "kind": "catalog-changes",
+   "planted": true,
+   "what": "Two changes 40 s apart (a new column, then a type change): the second event arrives first, then the first, then the second again."
+  },
+  {
+   "facts": {
+    "added": [],
+    "events": 0,
+    "removed": [
+     "currency"
+    ],
+    "retyped": []
+   },
+   "files": [
+    "events/catalog-changes/no-event/events.json",
+    "events/catalog-changes/no-event/before.json",
+    "events/catalog-changes/no-event/after.json"
+   ],
+   "id": "no-event",
+   "kind": "catalog-changes",
+   "planted": true,
+   "what": "Column currency of prices_raw is removed and no event arrives."
+  }
+ ],
+ "day": "2026-10-31",
+ "seed": 19
+}
