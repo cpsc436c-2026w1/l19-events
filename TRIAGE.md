@@ -30,7 +30,7 @@ The lens column says how often the reaction runs: every request, every row or ru
 ## Batch files (S3 event for a new export in `prices_raw/day=2026-10-31/`)
 
 The handler runs when a file arrives, before the nightly job `curate-prices`. It computes five values from the file
-(rows, products, repeated `obs_id`, average price, arrival time) and compares them with `events/batch-files/baseline.json`
+(rows, products, repeated `obs_id`, average price converted to CAD by each row's currency label, arrival time) and compares them with `events/batch-files/baseline.json`
 (7 days) and with the job's start time. Tolerances are L18's: rows within 5 %, average price within 8 %.
 
 | Case | What should happen | Code or agent | Reason | Lens |
@@ -38,8 +38,8 @@ The handler runs when a file arrives, before the nightly job `curate-prices`. It
 | `normal-day` | Mark the three files as checked; the job reads them. No alert, no model call. | code | All five values are inside their range. | every row or run |
 | `duplicate-rows` | Hold the file of store centre, alert with the count of repeated `obs_id`; ask the store's export team for a new file. | code | `obs_id` is unique in a normal file (a second observation has its own id), so a repeated id is one `GROUP BY`. A row count of twice the usual confirms it. | every row or run |
 | `missing-store` | At 01:55 list the day's prefix; a store without a file is named in an alert and the upstream team is asked (L18 fix `ask_upstream`). | code | A file that does not arrive sends no event, so the rule is a check on a schedule: three stores expected, two found. | every row or run |
-| `not-converted` | Hold the file of store online; alert that its currency label is CAD and its average is near 1/1.55 of the 7-day average in CAD. | code | Two comparisons: the label differs from the store's currency (EUR), and the ratio matches the fixed rate (the same ratio test as `verify()` in L18). | every row or run |
-| `half-file` | Code holds the file (rows 51 % below usual). The agent then finds what is wrong with it and returns a cause and a fix for a person. | agent | No rule names this: the file is valid CSV, ids are unique, the average price is in range. Whether to ask for a new file or to accept a shorter list depends on what a read of the file shows (which products are missing). | every row or run |
+| `not-converted` | Hold the file of store online; alert that its currency label is CAD and its average in CAD (4.05) is near 1/1.55 of its 7-day average (6.37). | code | Two comparisons: the label differs from the store's currency (EUR), and the ratio matches the fixed rate (the same ratio test as `verify()` in L18). | every row or run |
+| `half-file` | Code holds the file (242 rows, 52 % below the usual 501). The agent then finds what is wrong with it and returns a cause and a fix for a person. | agent | No rule names this: the file is valid CSV, ids are unique, the average price is in range. Whether to ask for a new file or to accept a shorter list depends on what a read of the file shows (which products are missing). | every row or run |
 | `late-file` | Propose one rerun of the day's partition (L18 fix `rerun_partition`), started once after a person approves. | code | One comparison: the file's `eventTime` is after the job's `StartedOn` for that day. | every row or run |
 
 ## Catalog changes (EventBridge event of the Glue Data Catalog)
@@ -52,7 +52,7 @@ definition and compares it with the last one it stored; it never acts on the eve
 | `new-partition` | Record the partition; no alert. | code | `typeOfChange` is `CreatePartition` and the columns are unchanged. | every row or run |
 | `new-table` | Record the table and its columns; list it as lacking descriptions. | code | A fixed read (`GetTable`) and a store of the result. | every row or run |
 | `new-column` | Code records the column and lets the job run (it does not read the column). A model drafts a description from the column's name, type and sample values; a person accepts or edits it before it is written to the catalog. | agent | The description is text that no rule can write, and what to say depends on the sample values read. It is written once and reviewed, as the catalog descriptions on L18's build-time column. | once at build time |
-| `type-change` | Block the next run of `curate-prices` and alert: `price` is one of the columns the job reads and its type differs. A person changes the job (L18 fix `change_job_then_rerun`). | code | Compare the stored and the current type of each column in the job's read list. | every row or run |
+| `type-change` | Block the next run of `curate-prices` and alert: `price` is one of the columns the job reads and its type differs. A person changes the job (L18 fix `change_job_then_rerun`). | code | Compare the stored and the current type of each column in the job's read list (`job.reads` in `events/manifest.json`). | every row or run |
 | `renamed-column` | Block the next run and alert: `price` is gone and `unit_price` is new with the same type. A person changes the job. | code | The reaction is the same for a rename and for a drop: a column the job reads is missing. The handler does not need to decide which it was. This is L18's `schema_change`, found before the job fails, not after. | every row or run |
 | `dropped-column` | Alert the table's owners that `source` is gone; the job is not blocked. | code | `source` is not in the job's read list; set difference of column names. | every row or run |
 | `repeated-event` | The stored definition equals the catalog's current one (version 8) after each of the three events; one alert, not three. | code | The handler compares `VersionId` with the stored one and acts only when it is newer. | every row or run |
@@ -74,7 +74,7 @@ scenarios for the code handlers and the evals of the two agents, run before a me
 One more agent trigger does not have a planted case of its own: a batch file that fails a check and matches none of the
 rules above. `half-file` is the example of it.
 
-## The two agents
+## Agent cases: what each reads and returns
 
 | | `half-file` | `new-column` |
 |---|---|---|
@@ -101,9 +101,9 @@ is settled by a rule. That is how the runbook grows: a case the agent explained 
 3. **Prices not converted.** L18's `currency_not_converted` is a missing job argument; nothing is converted when a
    file arrives. The planted file has the wrong currency label instead. Both give the same ratio of 1/1.55 after
    the job, and `verify()` cannot tell them apart.
-4. **When the tools have something to read.** L18's runbook and four of its six tools read job runs, logs and
-   `prices_curated`, which exist after the job. A handler on the file's arrival has only `list_raw_objects` and
-   `count_rows` on `prices_raw`. `verify("schema_change")` needs a failed run, which does not exist yet when the
+4. **When the tools have something to read.** L18's runbook and three of its six tools (`get_job_runs`, `get_run_log`,
+   `average_price`) read job runs, logs and `prices_curated`, which exist after the job. A handler on the file's
+   arrival has `list_raw_objects`, `get_table_versions` and `count_rows` on `prices_raw`. `verify("schema_change")` needs a failed run, which does not exist yet when the
    catalog event arrives.
 5. **Partitions.** `storeplan/catalog.json` and `lake.py` have `prices_raw` as one unpartitioned Parquet file;
    `world.py` reads CSV exports under `prices_raw/day=...`. The batch files follow `world.py`. Because the catalog

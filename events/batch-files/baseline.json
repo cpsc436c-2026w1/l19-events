@@ -17,6 +17,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-24T01:41:10Z",
      "avg_price": 6.08,
+     "avg_price_cad": 6.08,
      "currencies": [
       "CAD"
      ],
@@ -30,6 +31,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-25T01:41:10Z",
      "avg_price": 6.01,
+     "avg_price_cad": 6.01,
      "currencies": [
       "CAD"
      ],
@@ -43,6 +45,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-26T01:41:10Z",
      "avg_price": 6.06,
+     "avg_price_cad": 6.06,
      "currencies": [
       "CAD"
      ],
@@ -56,6 +59,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-27T01:41:10Z",
      "avg_price": 6.02,
+     "avg_price_cad": 6.02,
      "currencies": [
       "CAD"
      ],
@@ -69,6 +73,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-28T01:41:10Z",
      "avg_price": 6.1,
+     "avg_price_cad": 6.1,
      "currencies": [
       "CAD"
      ],
@@ -82,6 +87,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-29T01:41:10Z",
      "avg_price": 6.08,
+     "avg_price_cad": 6.08,
      "currencies": [
       "CAD"
      ],
@@ -95,6 +101,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-30T01:41:10Z",
      "avg_price": 6.07,
+     "avg_price_cad": 6.07,
      "currencies": [
       "CAD"
      ],
@@ -107,6 +114,7 @@
    ],
    "usual": {
     "avg_price": 6.07,
+    "avg_price_cad": 6.07,
     "products": 411,
     "rows": 501,
     "size": 57623
@@ -118,6 +126,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-24T01:40:10Z",
      "avg_price": 6.13,
+     "avg_price_cad": 6.13,
      "currencies": [
       "CAD"
      ],
@@ -131,6 +140,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-25T01:40:10Z",
      "avg_price": 6.18,
+     "avg_price_cad": 6.18,
      "currencies": [
       "CAD"
      ],
@@ -144,6 +154,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-26T01:40:10Z",
      "avg_price": 6.11,
+     "avg_price_cad": 6.11,
      "currencies": [
       "CAD"
      ],
@@ -157,6 +168,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-27T01:40:10Z",
      "avg_price": 6.13,
+     "avg_price_cad": 6.13,
      "currencies": [
       "CAD"
      ],
@@ -170,6 +182,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-28T01:40:10Z",
      "avg_price": 6.12,
+     "avg_price_cad": 6.12,
      "currencies": [
       "CAD"
      ],
@@ -183,6 +196,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-29T01:40:10Z",
      "avg_price": 6.16,
+     "avg_price_cad": 6.16,
      "currencies": [
       "CAD"
      ],
@@ -196,6 +210,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-30T01:40:10Z",
      "avg_price": 6.18,
+     "avg_price_cad": 6.18,
      "currencies": [
       "CAD"
      ],
@@ -208,6 +223,7 @@
    ],
    "usual": {
     "avg_price": 6.13,
+    "avg_price_cad": 6.13,
     "products": 411,
     "rows": 496,
     "size": 56568
@@ -219,6 +235,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-24T01:42:10Z",
      "avg_price": 4.11,
+     "avg_price_cad": 6.37,
      "currencies": [
       "EUR"
      ],
@@ -232,6 +249,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-25T01:42:10Z",
      "avg_price": 4.07,
+     "avg_price_cad": 6.32,
      "currencies": [
       "EUR"
      ],
@@ -245,6 +263,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-26T01:42:10Z",
      "avg_price": 4.13,
+     "avg_price_cad": 6.4,
      "currencies": [
       "EUR"
      ],
@@ -258,6 +277,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-27T01:42:10Z",
      "avg_price": 4.05,
+     "avg_price_cad": 6.28,
      "currencies": [
       "EUR"
      ],
@@ -271,6 +291,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-28T01:42:10Z",
      "avg_price": 4.09,
+     "avg_price_cad": 6.34,
      "currencies": [
       "EUR"
      ],
@@ -284,6 +305,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-29T01:42:10Z",
      "avg_price": 4.11,
+     "avg_price_cad": 6.37,
      "currencies": [
       "EUR"
      ],
@@ -297,6 +319,7 @@
      "arrived_after_job_start": false,
      "arrived_at": "2026-10-30T01:42:10Z",
      "avg_price": 4.13,
+     "avg_price_cad": 6.4,
      "currencies": [
       "EUR"
      ],
@@ -309,6 +332,7 @@
    ],
    "usual": {
     "avg_price": 4.11,
+    "avg_price_cad": 6.37,
     "products": 411,
     "rows": 489,
     "size": 56218

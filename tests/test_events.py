@@ -224,17 +224,22 @@ def test_batch_cases_show_what_they_plant(cases):
     for store, x in normal.items():
         usual = base[store]["usual"]
         assert x["products"] == M.PRODUCTS and x["repeated_obs_ids"] == 0 and not x["arrived_after_job_start"]
-        assert abs(x["rows"] / usual["rows"] - 1) <= 0.05 and abs(x["avg_price"] / usual["avg_price"] - 1) < 0.08
+        assert abs(x["rows"] / usual["rows"] - 1) <= 0.05
+        assert abs(x["avg_price_cad"] / usual["avg_price_cad"] - 1) < 0.08
         assert len(base[store]["days"]) == 7
     assert normal["online"]["currencies"] == ["EUR"] and normal["north"]["currencies"] == ["CAD"]
     assert f["duplicate-rows"]["centre"]["repeated_obs_ids"] == normal["centre"]["rows"]
     assert "online" not in f["missing-store"]
     nc = f["not-converted"]["online"]
     assert nc["currencies"] == ["CAD"] and nc["avg_price"] == normal["online"]["avg_price"]
-    assert abs(nc["avg_price"] / M.NORMAL_AVG["online"] - 1 / M.EUR_TO_CAD) < 0.05   # triage/agent.py verify()
+    ratio = nc["avg_price_cad"] / base["online"]["usual"]["avg_price_cad"]           # what the handler compares
+    assert abs(ratio - 1) > 0.08 and abs(ratio - 1 / M.EUR_TO_CAD) < 0.05              # triage/agent.py verify()
+    rows_off = lambda c, s: abs(f[c][s]["rows"] / base[s]["usual"]["rows"] - 1) > 0.05   # noqa: E731
+    assert rows_off("half-file", "centre") and rows_off("duplicate-rows", "centre")
+    assert not rows_off("not-converted", "online") and not rows_off("late-file", "centre")
     half = f["half-file"]["centre"]
     assert half["products"] == M.PRODUCTS // 2 and half["repeated_obs_ids"] == 0
-    assert abs(half["avg_price"] / base["centre"]["usual"]["avg_price"] - 1) < 0.08   # prices do not give it away
+    assert abs(half["avg_price_cad"] / base["centre"]["usual"]["avg_price_cad"] - 1) < 0.08   # prices do not give it away
     late = f["late-file"]
     assert late["centre"]["arrived_after_job_start"] and not late["north"]["arrived_after_job_start"]
     for case in ("duplicate-rows", "not-converted", "half-file", "late-file"):       # the other stores are untouched
@@ -266,6 +271,14 @@ def test_glue_event_shape(case, cases):
         assert d["databaseName"] == M.DATABASE
     after = json.loads((folder / "after.json").read_text())["Table"]
     assert {"Name", "VersionId", "StorageDescriptor", "PartitionKeys"} <= set(after)
+
+
+def test_job_read_list_separates_the_column_cases(manifest, cases):
+    reads = set(manifest["job"]["reads"])
+    f = {c["id"]: c["facts"] for c in cases.values() if c["kind"] == "catalog-changes"}
+    hit = lambda c: bool(reads & set(f[c]["removed"] + f[c]["retyped"]))   # noqa: E731
+    assert hit("type-change") and hit("renamed-column") and hit("no-event") and hit("repeated-event")
+    assert not hit("dropped-column") and not hit("new-column") and not hit("new-partition")
 
 
 def test_catalog_cases_show_what_they_plant(cases):
