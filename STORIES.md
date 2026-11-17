@@ -1,8 +1,9 @@
 # Job stories, requirements and the events that test them
 
-Phase 1, 2026-11-17: the mapping only, no Gherkin yet. Form as in `plans/2026-11-17-l19-stories-to-scenarios.md`:
+2026-11-17. Form as in `plans/2026-11-17-l19-stories-to-scenarios.md`:
 a job story becomes one feature, each requirement (one EARS line, R010, R020 ...) becomes at least one tagged
-scenario, and the planted case goes into the scenario's `Given`. Case names are those of `events/manifest.json`.
+scenario, and the planted case goes into the scenario's `Given`. The features are in `features/`;
+`check_traceability.py` fails when a story lacks a feature, a requirement lacks a scenario, or a tag names nothing. Case names are those of `events/manifest.json`.
 The numbers are targets chosen for this demo; the 5 % and 8 % ranges are L18's (`triage/world.py`).
 
 ## JS01 Store manager: price updates of my store
@@ -32,8 +33,8 @@ file at night and do not repair `prices_curated` in the morning.
 | R020 | IF an `obs_id` appears more than once in a file THEN THE SYSTEM SHALL hold the file and report the count | 493 repeated ids reported | `duplicate-rows` | code |
 | R030 | IF a store's file has not arrived by 01:55 THEN THE SYSTEM SHALL alert and name the store | 1 store named, 5 minutes before the job | `missing-store`, `late-file` | code |
 | R040 | IF a store's average price in CAD differs from its 7-day average by more than 8 % THEN THE SYSTEM SHALL hold the file | held before 02:00 | `not-converted` | code |
-| R050 | IF a file's row count differs from the usual by more than 5 % THEN THE SYSTEM SHALL hold the file | held before 02:00 | `half-file`, `duplicate-rows` | code |
-| R060 | IF a held file matches no rule THEN THE SYSTEM SHALL return a cause and a fix from the fixed lists, with the facts it read | at most 6 tool calls and 8 model calls; code confirms the cause against the file | `half-file` | agent, checked by an eval |
+| R050 | IF a file's row count differs from the usual by more than 5 % THEN THE SYSTEM SHALL hold the file | held before 02:00 | `half-file`, `duplicate-rows`, `category-missing` | code |
+| R060 | IF a held file matches no rule THEN THE SYSTEM SHALL return a cause and a fix from the fixed lists, with the facts it read | at most 6 tool calls and 8 model calls; code confirms the cause against the file | `half-file`, `category-missing` | agent, checked by an eval |
 | R070 | IF a file arrives after the day's job started THEN THE SYSTEM SHALL propose one rerun of that day and wait for approval | 1 rerun proposed, 0 started before approval | `late-file` | code |
 
 ## JS03 Analyst: a table I query changes
@@ -52,13 +53,16 @@ new column to have a description within a day, so that I do not write a query ag
 
 ## What the mapping shows
 
-| Story | Requirements | Cases | Tested with behave on generated events | Tested with an eval |
-|---|---|---|---|---|
-| JS01 | 6 | 6 | 6 | 0 |
-| JS02 | 7 | 6 | 6 | 1 |
-| JS03 | 6 | 8 | 5 | 1 |
+| Story | Feature | Requirements | Scenarios | Of them on a stub model | Eval |
+|---|---|---|---|---|---|
+| JS01 | `features/js01_price_updates.feature` | 6 | 6 | 0 | 0 |
+| JS02 | `features/js02_export_files.feature`, `features/js02_eval.feature` | 7 | 17 | 6 | 1 |
+| JS03 | `features/js03_catalog_changes.feature` | 6 | 10 | 3 | 0 |
 
 A requirement that code settles has a fixed answer, so a behave scenario with the planted case in `Given` tests it.
-The two requirements an agent serves (JS02 R060, JS03 R040) have a fixed output format that code can check, and an
-answer that varies between runs: an eval with a threshold tests them, and a behave scenario with a stub model tests
-their limits (tool calls, no write without approval).
+JS02 R060 is served by an agent, whose answer can differ between runs. Scenarios with a stub model test what does
+not vary: its limits (a model that never stops, a cause the data does not show, a tool that refuses a day outside
+its range, a file that code settles). An eval tests what varies: it runs the agent on both planted cases, scores
+the named cause in code, and `gate.py` fails below a threshold. The eval is one tagged scenario; it runs on the
+stub by default and on the course LLM gateway with `L19_LIVE=1`. JS03 R040 is one model call with a check in code:
+its scenarios run on a stub; the wording of a live draft is left to the person who accepts it.

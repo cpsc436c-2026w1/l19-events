@@ -1,0 +1,339 @@
+"""Steps for the three job stories. The Given steps take their data from the simulator's files in events/; the
+When steps call the Lambda-shaped handlers; the Then steps compare typed results. No AWS, no model: the agent and
+the drafter run on stub models, and the eval runs live only when L19_LIVE=1."""
+import json
+import os
+from pathlib import Path
+
+from behave import given, then, when
+
+import batch_check
+import catalog_watch
+import column_drafter
+import eval_held_file
+import gate
+import half_file_agent
+import stream_window
+from local import EVENTS, LocalCatalog, LocalLake, object_key
+
+DAY = "2026-10-31"
+FIRST = f"{DAY}T09:00:00Z"
+
+# ---- JS01: price updates ------------------------------------------------------------------------------------
+
+
+@given("the simulator delivers one hour of price updates to the window function")
+def step_stream(context):
+    folder = EVENTS / "price-updates"
+    context.records = [json.loads(line) for line in (folder / "records.jsonl").read_text().splitlines()]
+    context.truth = json.loads((folder / "truth.json").read_text())
+    stream_window.SINK = context.sink = stream_window.Sink()
+    stream_window.run_local(context.records)
+    context.final = stream_window.final_numbers(context.sink, FIRST, 12)
+
+
+def _planted(context, name):
+    return context.truth["planted_event_ids"][name]
+
+
+@given("the simulator delivers {n:d} of the updates a second time")
+def step_redelivered(context, n):
+    ids = [r["eventID"] for r in context.records]
+    assert sorted(i for i in set(ids) if ids.count(i) == 2) == sorted(_planted(context, "redelivered-update"))
+    assert len(_planted(context, "redelivered-update")) == n
+
+
+@given("the simulator holds the updates of store centre from 09:10 to 09:16")
+def step_late(context):
+    assert _planted(context, "late-update")
+
+
+@given("the simulator sends one update of store online in EUR")
+def step_eur(context):
+    assert len(_planted(context, "eur-update")) == 1
+
+
+@given("the simulator sends {n:d} updates of store north in two minutes from 09:20")
+def step_burst(context, n):
+    assert len(_planted(context, "store-burst")) == n
+
+
+@given("the simulator does not send an update from 09:40 to 09:50")
+def step_quiet(context):
+    assert context.truth["quiet"] == {"from": f"{DAY}T09:40:00Z", "to": f"{DAY}T09:50:00Z"}
+
+
+def _cell(context, hhmm, store):
+    return context.final[f"{DAY}T{hhmm}:00Z"][store]
+
+
+@then("window {hhmm} has {n:d} updates with an average of {avg:f} for store {store}")
+def step_window_avg(context, hhmm, n, avg, store):
+    assert _cell(context, hhmm, store) == {"count": n, "avg_price": avg}, _cell(context, hhmm, store)
+
+
+@then("window {hhmm} has {n:d} updates for store {store}")
+def step_window_count(context, hhmm, n, store):
+    assert _cell(context, hhmm, store)["count"] == n, _cell(context, hhmm, store)
+
+
+@then("every window has the count and the average of the simulator's truth")
+def step_truth(context):
+    for w in context.truth["windows"]:
+        assert context.final[w["start"]] == w["correct"], w["start"]
+
+
+@then("the number of updates stored equals the number in the stream")
+def step_once(context):
+    s = context.sink
+    assert sum(w.count for w in s.windows) + len(s.corrections) + len(s.rejected) == context.truth["records_in_stream"]
+
+
+@then("{n:d} updates are stored as corrections for window {hhmm}")
+def step_corrections(context, n, hhmm):
+    got = [c for c in context.sink.corrections.values() if c.window_start == f"{DAY}T{hhmm}:00Z"]
+    assert len(got) == n == len(context.sink.corrections)
+
+
+@then("{n:d} update is in the rejected list with currency {currency}")
+def step_rejected(context, n, currency):
+    assert [r.currency for r in context.sink.rejected.values()] == [currency] * n
+
+
+@then("the only window flagged as a burst is {hhmm} for store {store}")
+def step_flag(context, hhmm, store):
+    assert [(w.store, w.window_start[11:16]) for w in context.sink.windows if w.burst] == [(store, hhmm)]
+
+
+@then("windows {a} and {b} are reported with a count of 0 for every store")
+def step_zero(context, a, b):
+    quiet = [s[11:16] for s, per in context.final.items() if all(v["count"] == 0 for v in per.values())]
+    assert quiet == [a, b], quiet
+
+
+# ---- JS02: export files -------------------------------------------------------------------------------------
+
+@given('the simulator delivers the export files of the night "{night}"')
+def step_night(context, night):
+    context.lake = batch_check.LAKE = half_file_agent.LAKE = LocalLake(night)
+    context.model_calls = 0
+
+
+@when("the file check runs on each new file")
+def step_check(context):
+    context.verdicts = {v["store"]: v for e in context.lake.s3_events() for v in batch_check.handler(e)}
+
+
+@when("the check for missing files runs at 01:55")
+def step_deadline(context):
+    context.missing = batch_check.deadline_handler({"day": DAY, "time": f"{DAY}T01:55:00Z"})
+
+
+@then("{passed:d} files pass and {held:d} files are held")
+def step_pass_held(context, passed, held):
+    v = [x["verdict"] for x in context.verdicts.values()]
+    assert (v.count("pass"), sum(x in ("hold", "unsettled") for x in v)) == (passed, held), v
+
+
+@then("{passed:d} files pass")
+def step_pass(context, passed):
+    assert [x["verdict"] for x in context.verdicts.values()].count("pass") == passed
+
+
+@then("the agent makes 0 model calls")
+def step_no_model(context):
+    assert all(v["verdict"] != "unsettled" for v in context.verdicts.values())      # only an unsettled file reaches it
+
+
+@then('the file of store {store} has the verdict "{verdict}" and the cause "{cause}"')
+def step_verdict(context, store, verdict, cause):
+    v = context.verdicts[store]
+    assert (v["verdict"], v["cause"]) == (verdict, cause), v
+
+
+@then("the check reports {n:d} repeated ids for store {store}")
+def step_repeated(context, n, store):
+    assert context.verdicts[store]["facts"]["repeated_obs_ids"] == n
+
+
+@then('the stores named as missing are "{missing}"')
+def step_missing(context, missing):
+    assert context.missing["missing_stores"] == missing.split(), context.missing
+
+
+@then('the stores named as missing are ""')
+def step_none_missing(context):
+    assert context.missing["missing_stores"] == [] and context.missing["fix"] is None
+
+
+@then("the file of store {store} is held")
+def step_held(context, store):
+    assert context.verdicts[store]["verdict"] in ("hold", "unsettled"), context.verdicts[store]
+
+
+@then('the fix "{fix}" waits for approval')
+def step_approval(context, fix):
+    waiting = [v for v in context.verdicts.values() if v["needs_approval"]]
+    assert [v["fix"] for v in waiting] == [fix]
+
+
+@given('the agent\'s model is the stub "{mode}"')
+def step_stub(context, mode):
+    context.model = half_file_agent.stub_model(mode)
+
+
+@when("the agent triages the held file of store {store}")
+def step_triage(context, store):
+    rec = next(e["Records"][0] for e in context.lake.s3_events() if f"{store}-export" in e["Records"][0]["s3"]["object"]["key"])
+    context.trace = []
+    context.result = half_file_agent.triage(object_key(rec), rec["eventTime"][:19] + "Z", context.lake, context.model,
+                                            trace=context.trace)
+
+
+@then('the cause is "{cause}" and code confirms it')
+def step_cause(context, cause):
+    r = context.result
+    assert (r.cause, r.verified, r.decided_by) == (cause, True, "agent"), r
+
+
+@then('the cause "{cause}" is not confirmed by code')
+def step_refused(context, cause):
+    assert (context.result.cause, context.result.verified) == (cause, False)
+
+
+@then('the proposed fix is "{fix}"')
+def step_fix(context, fix):
+    assert context.result.fix == fix, context.result
+
+
+@then("the agent made at most {m:d} model calls and {t:d} tool calls")
+def step_caps(context, m, t):
+    assert context.result.model_calls <= m and context.result.tool_calls <= t, context.result
+
+
+@then("the run was stopped by the app")
+def step_stopped(context):
+    assert context.result.stopped.startswith("cap of"), context.result.stopped
+
+
+@then("the first tool call was refused with an error")
+def step_tool_error(context):
+    assert "error" in context.trace[0]["result"], context.trace[0]
+
+
+# ---- JS02: the eval -----------------------------------------------------------------------------------------
+
+@given("the eval of the agent on its planted cases")
+def step_eval(context):
+    context.live = os.environ.get("L19_LIVE") == "1"
+    # stub: every planted cause must be named. live: the threshold is a starting value, to be set from repeated
+    # runs of unchanged code (L19_LIVE_THRESHOLD).
+    context.threshold = float(os.environ.get("L19_LIVE_THRESHOLD", "0.5")) if context.live else 1.0
+
+
+@when("the eval runs")
+def step_eval_run(context):
+    log_dir = Path(context.tmp.name) / "eval" if not context.live else None
+    context.log = eval_held_file.run(live=context.live, model_id=os.environ.get("L19_MODEL", ""), log_dir=log_dir)
+
+
+@then("the gate passes at the threshold")
+def step_gate(context):
+    ok, acc = gate.passes(Path(context.log.location), context.threshold)
+    assert ok, f"accuracy {acc} is below {context.threshold}"
+
+
+@then("every planted case has a score in the log")
+def step_scores(context):
+    assert sorted(s.id for s in context.log.samples) == sorted(eval_held_file.CASES)
+    assert all("cause_in_code" in s.scores for s in context.log.samples)
+
+
+# ---- JS03: catalog changes ----------------------------------------------------------------------------------
+
+@given('the simulator delivers the catalog events of the case "{case}"')
+def step_catalog(context, case):
+    context.catalog = catalog_watch.CATALOG = column_drafter.CATALOG = LocalCatalog(case)
+    context.results = []
+
+
+@when("the catalog watch runs on each event")
+def step_watch(context):
+    context.results = [r for e in context.catalog.events() for r in catalog_watch.handler(e)]
+
+
+@when("the daily check runs")
+def step_daily(context):
+    context.results += catalog_watch.daily_handler({})
+
+
+@then('the table "{table}" is recorded')
+def step_recorded(context, table):
+    assert [(r["table"], r["actions"]) for r in context.results] == [(table, ["record"])], context.results
+
+
+@then("{n:d} alerts are raised")
+@then("{n:d} alert is raised")
+def step_alerts(context, n):
+    assert sum(r["alert"] for r in context.results) == n, context.results
+
+
+@then('the actions include "{action}"')
+def step_action(context, action):
+    assert any(action in r["actions"] for r in context.results), context.results
+
+
+@then('the actions do not include "{action}"')
+def step_no_action(context, action):
+    assert not any(action in r["actions"] for r in context.results), context.results
+
+
+@then('the stored version of "{table}" is {version:d}')
+def step_version(context, table, version):
+    assert context.catalog.stored[table]["Table"]["VersionId"] == str(version)
+
+
+@then('the removed columns are "{columns}"')
+def step_removed(context, columns):
+    assert [c for r in context.results for c in r["removed"]] == columns.split()
+
+
+@given('the drafter\'s model is the stub "{mode}"')
+def step_drafter_stub(context, mode):
+    chat, context.calls = column_drafter.stub_chat(mode), []
+    column_drafter.CHAT = lambda system, user: context.calls.append(user) or chat(system, user)
+    column_drafter.PENDING = Path(context.tmp.name) / "pending"
+
+
+@when("the drafter runs on each event")
+def step_draft(context):
+    context.drafts = [d for e in context.catalog.events() for d in column_drafter.handler(e)]
+
+
+@then('a draft for column "{column}" is in the pending folder with status "{status}"')
+def step_pending(context, column, status):
+    (d,) = [x for x in context.drafts if x["column"] == column]
+    saved = json.loads(Path(d["pending_file"]).read_text())
+    assert saved["status"] == status and Path(d["pending_file"]).parent == column_drafter.PENDING
+
+
+@then('the draft has at most {n:d} characters and names the type "{column_type}"')
+def step_draft_text(context, n, column_type):
+    text = context.drafts[0]["description"]
+    assert 0 < len(text) <= n and column_type in text.lower(), text
+
+
+@then('the column "{column}" does not have a description in the catalog')
+def step_catalog_unwritten(context, column):
+    table = context.catalog.get_table("", context.drafts[0]["table"])
+    assert next(c for c in table["Table"]["StorageDescriptor"]["Columns"] if c["Name"] == column)["Comment"] == ""
+
+
+@then("the drafter made {n:d} model calls")
+def step_draft_calls(context, n):
+    assert len(context.calls) == n, len(context.calls)
+
+
+@then("the second user message carries the check's feedback")
+def step_feedback(context):
+    assert "It was rejected:" in context.calls[1] and "rejected" not in context.calls[0]

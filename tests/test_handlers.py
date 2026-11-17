@@ -62,6 +62,7 @@ EXPECTED = {"normal-day": {"north": "pass", "centre": "pass", "online": "pass"},
             "missing-store": {"north": "pass", "centre": "pass"},
             "not-converted": {"north": "pass", "centre": "pass", "online": "hold"},
             "half-file": {"north": "pass", "centre": "unsettled", "online": "pass"},
+            "category-missing": {"north": "unsettled", "centre": "pass", "online": "pass"},
             "late-file": {"north": "pass", "centre": "rerun_needed", "online": "pass"}}
 CAUSE = {"duplicate-rows": "duplicate_rows", "not-converted": "currency_not_converted", "late-file": "late_arrival"}
 
@@ -121,9 +122,13 @@ def test_catalog_watch_daily_check_finds_a_change_without_an_event():
     assert catalog_watch.daily_handler({})[0]["actions"] == ["none"]        # the next day: nothing new
 
 
-# ---- the half-file agent ------------------------------------------------------------------------------------
+# ---- the agent for a held file ------------------------------------------------------------------------------
 
-def _triage(case, mode="stub", caps=None, store="centre"):
+AGENT_CASES = {"half-file": ("centre", "partial_file"), "category-missing": ("north", "category_missing")}
+
+
+def _triage(case, mode="stub", caps=None, store=None):
+    store = store or AGENT_CASES[case][0]
     lake = LocalLake(case)
     event = next(e for e in lake.s3_events() if f"{store}-export" in e["Records"][0]["s3"]["object"]["key"])
     rec, trace = event["Records"][0], []
@@ -132,11 +137,23 @@ def _triage(case, mode="stub", caps=None, store="centre"):
     return r, trace
 
 
-def test_agent_names_the_partial_file_and_code_confirms_it():
-    r, trace = _triage("half-file")
-    assert (r.decided_by, r.cause, r.verified, r.fix) == ("agent", "partial_file", True, "ask_upstream")
-    assert [t["tool"] for t in trace if "tool" in t] == ["summarize_file", "previous_days", "export_log"]
-    assert r.model_calls == 4 and r.tool_calls == 3 and not r.stopped and r.evidence
+@pytest.mark.parametrize("case", list(AGENT_CASES))
+def test_agent_names_the_cause_and_code_confirms_it(case):
+    r, trace = _triage(case)
+    assert (r.decided_by, r.cause, r.verified, r.fix) == ("agent", AGENT_CASES[case][1], True, "ask_upstream")
+    assert [t["tool"] for t in trace if "tool" in t] == ["rows_per_product", "rows_per_product", "export_log",
+                                                         "product_categories"]
+    assert r.model_calls == 5 and r.tool_calls == 4 and not r.stopped and r.evidence
+
+
+@pytest.mark.parametrize("case", list(AGENT_CASES))
+def test_verify_accepts_only_the_cause_the_data_shows(case):
+    lake = LocalLake(case)
+    store, expected = AGENT_CASES[case]
+    key = f"prices_raw/day=2026-10-31/{store}-export.csv"
+    v = batch_check.check(key, lake.get_object(key), "2026-10-31T01:40:10Z", lake.baseline(store)["usual"],
+                          lake.job_started_at())
+    assert [c for c in half_file_agent.CAUSES if half_file_agent.verify(c, v, lake)] == [expected]
 
 
 @pytest.mark.parametrize("case,store", [("normal-day", "centre"), ("duplicate-rows", "centre"),
@@ -157,15 +174,32 @@ def test_runaway_model_is_stopped_by_the_caps():
     assert (r.cause, r.verified, r.fix) == (None, False, "escalate")
 
 
-def test_agent_tools_are_read_only_and_take_no_arguments():
+def test_a_day_outside_the_window_is_refused_by_the_tool():
+    r, trace = _triage("category-missing", "stub-outside")
+    assert "error" in trace[0]["result"] and trace[0]["args"] == {"day": "2026-09-01"}
+    assert (r.cause, r.verified) == ("category_missing", True)
+
+
+def test_agent_tools_return_stored_data_only():
+    """No tool returns a count, a comparison or a flag: only what is stored. verify does not use the tools."""
+    import inspect
+
     lake = LocalLake("half-file")
     before = {p: p.read_bytes() for p in lake.folder.rglob("*") if p.is_file()}
-    tools = half_file_agent.make_tools(lake, "prices_raw/day=2026-10-31/centre-export.csv", "centre")
-    assert [t.tool_name for t in tools] == ["summarize_file", "previous_days", "export_log"]
-    for t in tools:
-        assert t.tool_spec["inputSchema"]["json"].get("properties", {}) == {}
-        assert len(json.dumps(t())) < 3000                    # small results
+    tools = {t.tool_name: t for t in half_file_agent.make_tools(lake, "prices_raw/day=2026-10-31/centre-export.csv", "centre")}
+    assert list(tools) == ["rows_per_product", "list_files", "export_log", "product_categories"]
+    assert set(tools["rows_per_product"](day="2026-10-31")) == {"store", "day", "rows"}
+    assert set(tools["rows_per_product"](day="2026-10-30")["rows"]) > set(tools["rows_per_product"](day="2026-10-31")["rows"])
+    assert "error" in tools["rows_per_product"](day="2026-10-23")
+    listing = tools["list_files"]()["Contents"]
+    assert len(listing) == 8 and all(set(o) == {"Key", "Size", "LastModified"} and "centre" in o["Key"] for o in listing)
+    assert set(tools["export_log"]()) == {"lines"} and set(tools["product_categories"]()) == {"categories"}
+    for name in ("list_files", "export_log", "product_categories"):
+        assert tools[name].tool_spec["inputSchema"]["json"].get("properties", {}) == {}
+    assert all(len(json.dumps(t(day="2026-10-31") if n == "rows_per_product" else t())) < 12000 for n, t in tools.items())
     assert before == {p: p.read_bytes() for p in lake.folder.rglob("*") if p.is_file()}
+    src = inspect.getsource(half_file_agent.verify)
+    assert "make_tools" not in src and "evidence" not in src.split('"""')[2]
 
 
 def test_agent_lambda_entry_point():

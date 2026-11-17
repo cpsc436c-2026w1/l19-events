@@ -11,7 +11,7 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 | Kind | Folder | One event is | Cases |
 |---|---|---|---|
 | Price updates | `price-updates/` | one change record of the latest-price DynamoDB table (item before and after) | 6 |
-| Batch files | `batch-files/` | one S3 event notification for a new export file in `prices_raw/day=2026-10-31/` | 6 |
+| Batch files | `batch-files/` | one S3 event notification for a new export file in `prices_raw/day=2026-10-31/` | 7 |
 | Catalog changes | `catalog-changes/` | one EventBridge event of the Glue Data Catalog | 8 |
 
 ## Cases
@@ -29,6 +29,7 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 | `missing-store` | batch-files | planted | Export of store online does not arrive: two files, two events. | `batch-files/missing-store/` |
 | `not-converted` | batch-files | planted | Export of store online is labelled CAD, but its prices are the EUR amounts. | `batch-files/not-converted/` |
 | `half-file` | batch-files | planted | Export of store centre stops after half of the products; the file is valid CSV. | `batch-files/half-file/` |
+| `category-missing` | batch-files | planted | Export of store north lacks every product of category noodles; the export's query left them out. | `batch-files/category-missing/` |
 | `late-file` | batch-files | planted | Export of store centre arrives at 03:12:40, after the job started at 02:00:04. | `batch-files/late-file/` |
 | `new-partition` | catalog-changes | normal | Nightly job writes the first day of November: prices_curated gets partition month=2026-11. | `catalog-changes/new-partition/` |
 | `new-table` | catalog-changes | normal | Table price_window_counts is created in the database. | `catalog-changes/new-table/` |
@@ -49,7 +50,7 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 - `batch-files/<case>/prices_raw/day=2026-10-31/<store>-export.csv`: the files of one night; `s3-events.json` holds their
   notifications in the order of arrival; `export-logs/<store>.log` is the store's export log for that file (a design
   for this demo: what the export read and what it uploaded). `baseline.json` has rows, size and average price of each store's file for
-  the 7 days before.
+  the 7 days before, and `history.json` the rows per product in each of those files.
 - `catalog-changes/<case>/events.json`: the events in the order of delivery; `before.json` and `after.json` are the
   table as `GetTable` returns it, cut to name, version, columns and partition keys. `new-column/samples.json` has 20
   values of the new column.

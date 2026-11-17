@@ -55,7 +55,7 @@ def test_generator_reads_no_clock_and_no_unseeded_randomness():
 
 def test_manifest_counts_and_files(manifest, cases):
     kinds = [c["kind"] for c in manifest["cases"]]
-    assert {k: kinds.count(k) for k in set(kinds)} == {"price-updates": 6, "batch-files": 6, "catalog-changes": 8}
+    assert {k: kinds.count(k) for k in set(kinds)} == {"price-updates": 6, "batch-files": 7, "catalog-changes": 8}
     assert len(cases) == len(manifest["cases"])
     for c in cases.values():
         assert re.fullmatch(r"[a-z]+-[a-z]+", c["id"]), c["id"]          # two-word names, no letter codes
@@ -69,6 +69,7 @@ def test_documents_name_every_case_and_only_real_cases(doc, cases):
     cited = set(re.findall(r"`([a-z]+-[a-z]+)`", text))
     kinds = {"price-updates", "batch-files", "catalog-changes"}
     words = {"curate-prices", "resend-duplicates", "late-events"}          # code words that are not case ids
+    cited = {c for c in cited if "/" not in c and "." not in c}
     assert set(cases) <= cited, sorted(set(cases) - cited)
     assert cited - set(cases) - kinds - words == set(), sorted(cited - set(cases) - kinds - words)
 
@@ -83,7 +84,7 @@ def test_triage_gives_each_case_one_verdict_and_one_lens(cases):
         assert cells[4] in ("every request", "every row or run", "every build", "once at build time"), r
         seen[cid] = cells[2]
     assert set(seen) == set(cases)
-    assert sorted(k for k, v in seen.items() if v == "agent") == ["half-file", "new-column"]
+    assert sorted(k for k, v in seen.items() if v == "agent") == ["category-missing", "half-file", "new-column"]
 
 
 def test_stories_map_requirements_to_real_cases(cases):
@@ -240,6 +241,10 @@ def test_batch_cases_show_what_they_plant(cases):
     half = f["half-file"]["centre"]
     assert half["products"] == M.PRODUCTS // 2 and half["repeated_obs_ids"] == 0
     assert abs(half["avg_price_cad"] / base["centre"]["usual"]["avg_price_cad"] - 1) < 0.08   # prices do not give it away
+    cm = f["category-missing"]["north"]
+    assert cm["products"] == M.PRODUCTS - 24 and cm["repeated_obs_ids"] == 0
+    assert abs(cm["rows"] / base["north"]["usual"]["rows"] - 1) > 0.05
+    assert abs(cm["avg_price_cad"] / base["north"]["usual"]["avg_price_cad"] - 1) < 0.08
     late = f["late-file"]
     assert late["centre"]["arrived_after_job_start"] and not late["north"]["arrived_after_job_start"]
     for case in ("duplicate-rows", "not-converted", "half-file", "late-file"):       # the other stores are untouched

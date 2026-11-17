@@ -508,6 +508,66 @@
     "job_started_at": "2026-10-31T02:00:04Z",
     "per_store": {
      "centre": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:41:10Z",
+      "avg_price": 6.1,
+      "avg_price_cad": 6.1,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 493,
+      "size": 56708
+     },
+     "north": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:40:10Z",
+      "avg_price": 6.25,
+      "avg_price_cad": 6.25,
+      "currencies": [
+       "CAD"
+      ],
+      "products": 387,
+      "repeated_obs_ids": 0,
+      "rows": 463,
+      "size": 52808
+     },
+     "online": {
+      "arrived_after_job_start": false,
+      "arrived_at": "2026-10-31T01:42:10Z",
+      "avg_price": 4.05,
+      "avg_price_cad": 6.28,
+      "currencies": [
+       "EUR"
+      ],
+      "products": 411,
+      "repeated_obs_ids": 0,
+      "rows": 494,
+      "size": 56805
+     }
+    }
+   },
+   "files": [
+    "events/batch-files/category-missing/s3-events.json",
+    "events/batch-files/category-missing/prices_raw/day=2026-10-31/north-export.csv",
+    "events/batch-files/category-missing/export-logs/north.log",
+    "events/batch-files/category-missing/prices_raw/day=2026-10-31/centre-export.csv",
+    "events/batch-files/category-missing/export-logs/centre.log",
+    "events/batch-files/category-missing/prices_raw/day=2026-10-31/online-export.csv",
+    "events/batch-files/category-missing/export-logs/online.log"
+   ],
+   "id": "category-missing",
+   "kind": "batch-files",
+   "planted": true,
+   "what": "Export of store north lacks every product of category noodles; the export's query left them out."
+  },
+  {
+   "facts": {
+    "events": 3,
+    "job_started_at": "2026-10-31T02:00:04Z",
+    "per_store": {
+     "centre": {
       "arrived_after_job_start": true,
       "arrived_at": "2026-10-31T03:12:40Z",
       "avg_price": 6.1,

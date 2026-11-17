@@ -1,0 +1,116 @@
+[
+ {
+  "Records": [
+   {
+    "awsRegion": "us-west-2",
+    "eventName": "ObjectCreated:Put",
+    "eventSource": "aws:s3",
+    "eventTime": "2026-10-31T01:40:10.000Z",
+    "eventVersion": "2.6",
+    "requestParameters": {
+     "sourceIPAddress": "172.16.0.1"
+    },
+    "responseElements": {
+     "x-amz-id-2": "2bb64f87e61355dac3e7752bc08ea28bb82ae80cb2577e3cad55316e78f46bb2",
+     "x-amz-request-id": "2BB64F87E61355DA"
+    },
+    "s3": {
+     "bucket": {
+      "arn": "arn:aws:s3:::lake",
+      "name": "lake",
+      "ownerIdentity": {
+       "principalId": "A3NL1KOZZKExample"
+      }
+     },
+     "configurationId": "new-raw-file",
+     "object": {
+      "eTag": "fe8e7b403495d603256ea0a3273a6f90",
+      "key": "prices_raw/day%3D2026-10-31/north-export.csv",
+      "sequencer": "000001A18F9D40902BB6",
+      "size": 52808
+     },
+     "s3SchemaVersion": "1.0"
+    },
+    "userIdentity": {
+     "principalId": "AWS:AROAEXAMPLEEXPORT:store-export"
+    }
+   }
+  ]
+ },
+ {
+  "Records": [
+   {
+    "awsRegion": "us-west-2",
+    "eventName": "ObjectCreated:Put",
+    "eventSource": "aws:s3",
+    "eventTime": "2026-10-31T01:41:10.000Z",
+    "eventVersion": "2.6",
+    "requestParameters": {
+     "sourceIPAddress": "172.16.0.1"
+    },
+    "responseElements": {
+     "x-amz-id-2": "0b4f595682a6139de81fe31a3e5c05788750c5e3a13ef18ed9316a286595f4b0",
+     "x-amz-request-id": "0B4F595682A6139D"
+    },
+    "s3": {
+     "bucket": {
+      "arn": "arn:aws:s3:::lake",
+      "name": "lake",
+      "ownerIdentity": {
+       "principalId": "A3NL1KOZZKExample"
+      }
+     },
+     "configurationId": "new-raw-file",
+     "object": {
+      "eTag": "85217cf0758129c63c092c33540b228b",
+      "key": "prices_raw/day%3D2026-10-31/centre-export.csv",
+      "sequencer": "000001A18F9E2AF00B4F",
+      "size": 56708
+     },
+     "s3SchemaVersion": "1.0"
+    },
+    "userIdentity": {
+     "principalId": "AWS:AROAEXAMPLEEXPORT:store-export"
+    }
+   }
+  ]
+ },
+ {
+  "Records": [
+   {
+    "awsRegion": "us-west-2",
+    "eventName": "ObjectCreated:Put",
+    "eventSource": "aws:s3",
+    "eventTime": "2026-10-31T01:42:10.000Z",
+    "eventVersion": "2.6",
+    "requestParameters": {
+     "sourceIPAddress": "172.16.0.1"
+    },
+    "responseElements": {
+     "x-amz-id-2": "951be1ffe69690560512a292de3a86066068a3ed292a21506509696eff1eb159",
+     "x-amz-request-id": "951BE1FFE6969056"
+    },
+    "s3": {
+     "bucket": {
+      "arn": "arn:aws:s3:::lake",
+      "name": "lake",
+      "ownerIdentity": {
+       "principalId": "A3NL1KOZZKExample"
+      }
+     },
+     "configurationId": "new-raw-file",
+     "object": {
+      "eTag": "c30c7d50d7a02f4e736116a255195d14",
+      "key": "prices_raw/day%3D2026-10-31/online-export.csv",
+      "sequencer": "000001A18F9F1550951B",
+      "size": 56805
+     },
+     "s3SchemaVersion": "1.0"
+    },
+    "userIdentity": {
+     "principalId": "AWS:AROAEXAMPLEEXPORT:store-export"
+    }
+   }
+  ]
+ }
+]

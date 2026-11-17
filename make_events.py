@@ -178,14 +178,22 @@ def s3_event(key: str, data: bytes, arrived_at: str) -> dict:
                           "sequencer": f"{int(t.timestamp() * 1000):016X}{h[:4].upper()}"}}}]}
 
 
-def export_log(store: str, arrived: str, duplicates: int, size: int) -> list[str]:
+def export_log(store: str, arrived: str, query_rows: int, query_products: int, size: int) -> list[str]:
     """The store's export log for one night (a design for this demo). It says what the export read and what it
     uploaded; it does not name a fault."""
     t = datetime.strptime(arrived, "%Y-%m-%dT%H:%M:%SZ")
     at = lambda s: (t - timedelta(seconds=s)).strftime("%H:%M:%S")   # noqa: E731
     return [f"{at(12)} INFO export started for store {store}, day={DAY}",
-            f"{at(7)} INFO query returned {PRODUCTS + duplicates} rows for {PRODUCTS} products",
+            f"{at(7)} INFO query returned {query_rows} rows for {query_products} products",
             f"{at(1)} INFO upload finished: {size} bytes"]
+
+
+FILTERED_CATEGORY = "noodles"                                 # 24 of the 411 products (L18 data/products.jsonl)
+
+
+def categories() -> dict[str, str]:
+    with open(ROOT / "seed-data" / "products.csv", newline="") as f:
+        return {r["code"]: r["category"] for r in csv.DictReader(f)}
 
 
 BATCH_CASES = {
@@ -194,15 +202,22 @@ BATCH_CASES = {
     "missing-store": "Export of store online does not arrive: two files, two events.",
     "not-converted": "Export of store online is labelled CAD, but its prices are the EUR amounts.",
     "half-file": "Export of store centre stops after half of the products; the file is valid CSV.",
+    "category-missing": f"Export of store north lacks every product of category {FILTERED_CATEGORY}; the export's "
+                        "query left them out.",
     "late-file": f"Export of store centre arrives at {LATE_ARRIVAL}, after the job started at 02:00:04.",
 }
 
 
 def build_batch_files(base: dict) -> tuple[list[dict], dict]:
-    history = {}
+    history, per_product = {}, {s: {} for s in STORES}
+    category = categories()
     for day in HISTORY:
         for store in STORES:
             rows = export_rows(store, day, base[store])
+            counts: dict[str, int] = {}
+            for r in rows:
+                counts[r["product_code"]] = counts.get(r["product_code"], 0) + 1
+            per_product[store][day] = counts
             history.setdefault(store, []).append(
                 {"day": day, **file_facts(rows, csv_bytes(rows), f"{day}T{ARRIVALS[store]}Z")})
     baseline = {"days": HISTORY, "job": JOB, "job_starts_at": "02:00:04Z",
@@ -211,6 +226,7 @@ def build_batch_files(base: dict) -> tuple[list[dict], dict]:
                     k: statistics.median(x[k] for x in d) for k in ("rows", "products", "size", "avg_price", "avg_price_cad")}}
                     for s, d in history.items()}}
     dump(OUT / "batch-files" / "baseline.json", baseline)
+    dump(OUT / "batch-files" / "history.json", per_product)          # rows per product in each earlier file
 
     cases = []
     for case, what in BATCH_CASES.items():
@@ -225,9 +241,13 @@ def build_batch_files(base: dict) -> tuple[list[dict], dict]:
                 rows = rows + rows
             if case == "not-converted" and store == "online":
                 rows = [{**r, "currency": "CAD"} for r in rows]
+            query = (len(rows), len({r["product_code"] for r in rows}))      # what the export's query returned
             if case == "half-file" and store == "centre":
-                keep = set(sorted(base[store])[:PRODUCTS // 2])
+                keep = set(sorted(base[store])[:PRODUCTS // 2])              # the upload stops; the query was complete
                 rows = [r for r in rows if r["product_code"] in keep]
+            if case == "category-missing" and store == "north":
+                rows = [r for r in rows if category[r["product_code"]] != FILTERED_CATEGORY]
+                query = (len(rows), len({r["product_code"] for r in rows}))  # the query itself left them out
             if case == "late-file" and store == "centre":
                 arrived = f"{DAY}T{LATE_ARRIVAL}Z"
             key = f"prices_raw/day={DAY}/{store}-export.csv"
@@ -239,7 +259,7 @@ def build_batch_files(base: dict) -> tuple[list[dict], dict]:
             facts[store] = file_facts(rows, data, arrived)
             log = folder / "export-logs" / f"{store}.log"
             log.parent.mkdir(parents=True, exist_ok=True)
-            log.write_text("\n".join(export_log(store, arrived, DUPLICATES_ON_DAY[store], len(data))) + "\n")
+            log.write_text("\n".join(export_log(store, arrived, *query, len(data))) + "\n")
             files.append(rel(log))
             events.append((arrived, s3_event(key, data, arrived)))
         events = [e for _, e in sorted(events, key=lambda x: x[0])]         # in the order the files arrived
@@ -517,7 +537,7 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 - `batch-files/<case>/prices_raw/day={day}/<store>-export.csv`: the files of one night; `s3-events.json` holds their
   notifications in the order of arrival; `export-logs/<store>.log` is the store's export log for that file (a design
   for this demo: what the export read and what it uploaded). `baseline.json` has rows, size and average price of each store's file for
-  the 7 days before.
+  the 7 days before, and `history.json` the rows per product in each of those files.
 - `catalog-changes/<case>/events.json`: the events in the order of delivery; `before.json` and `after.json` are the
   table as `GetTable` returns it, cut to name, version, columns and partition keys. `new-column/samples.json` has 20
   values of the new column.

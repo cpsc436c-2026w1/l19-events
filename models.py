@@ -76,7 +76,7 @@ class StubAgentModel(Model):
     """A Strands model with fixed behaviour and no network.
 
     It asks for the tools in `reads`, one per model call, then replies with `answer(results)`, where results
-    maps a tool's name to its parsed result. runaway=True never stops asking for tools (tests the caps).
+    is the list of (tool name, parsed result) in the order of the calls. runaway=True never stops asking for tools (tests the caps).
     """
 
     def __init__(self, reads: list[tuple[str, dict]], answer: Callable[[dict], str], runaway: bool = False):
@@ -94,14 +94,14 @@ class StubAgentModel(Model):
 
     async def stream(self, messages, tool_specs=None, system_prompt=None, **kwargs) -> AsyncIterable[dict]:
         self.calls += 1
-        results, names = {}, {}
+        results, names = [], {}
         for m in messages:
             for block in m["content"]:
                 if "toolUse" in block:
                     names[block["toolUse"]["toolUseId"]] = block["toolUse"]["name"]
                 if "toolResult" in block:
                     text = " ".join(c.get("text", "") for c in block["toolResult"]["content"])
-                    results[names.get(block["toolResult"]["toolUseId"], "?")] = parse_json(text)
+                    results.append((names.get(block["toolResult"]["toolUseId"], "?"), parse_json(text)))
         done = sum(1 for m in messages for b in m["content"] if "toolResult" in b)
         yield {"messageStart": {"role": "assistant"}}
         if self.runaway or done < len(self.reads):

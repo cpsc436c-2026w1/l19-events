@@ -24,6 +24,7 @@ class LocalLake:
         self.case, self.folder = case, events / "batch-files" / case
         self.base = json.loads((events / "batch-files" / "baseline.json").read_text())
         self.job = json.loads((events / "manifest.json").read_text())["job"]
+        self.history = json.loads((events / "batch-files" / "history.json").read_text())
 
     def s3_events(self) -> list[dict]:
         return json.loads((self.folder / "s3-events.json").read_text())
@@ -45,9 +46,25 @@ class LocalLake:
         path = self.folder / "export-logs" / f"{store}.log"
         return path.read_text().splitlines() if path.exists() else []
 
-    def usual_product_codes(self, store: str) -> list[str]:        # the product codes in the store's earlier files
+    def rows_per_product(self, store: str, day: str) -> dict[str, int] | None:
+        """Rows per product code in the store's file of one day: the day of the case (read from the file) or one
+        of the 7 days before. None for any other day or when the file is not there."""
+        if day == self.job["started_at"][:10]:
+            path = self.folder / f"prices_raw/day={day}/{store}-export.csv"
+            if not path.exists():
+                return None
+            counts: dict[str, int] = {}
+            for r in csv.DictReader(path.open(newline="")):
+                counts[r["product_code"]] = counts.get(r["product_code"], 0) + 1
+            return counts
+        return self.history.get(store, {}).get(day)
+
+    def product_categories(self) -> dict[str, list[str]]:           # the products table: category -> product codes
+        out: dict[str, list[str]] = {}
         with open(ROOT / "seed-data" / "products.csv", newline="") as f:
-            return sorted(r["code"] for r in csv.DictReader(f))
+            for r in csv.DictReader(f):
+                out.setdefault(r["category"], []).append(r["code"])
+        return out
 
 
 def object_key(record: dict) -> str:

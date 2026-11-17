@@ -13,7 +13,7 @@ case, code checks the model's answer, a person approves a change.
 - **code**: a rule a team can write now settles the reaction. The rule reads a fixed set of values and its
   answer does not depend on what an earlier read showed.
 - **agent**: the next step depends on what a read shows, or the case is new and no rule names it. The agent gets
-  read-only tools, limits in code (here 6 tool calls, 8 model calls, 600 s) and must return a value from a
+  read-only tools, limits in code (here 6 tool calls, 8 model calls, 180 s) and must return a value from a
   fixed list; code checks that value against the data.
 
 The lens column says how often the reaction runs: every request, every row or run, every build, once at build time.
@@ -42,6 +42,7 @@ The handler runs when a file arrives, before the nightly job `curate-prices`. It
 | `missing-store` | At 01:55 list the day's prefix; a store without a file is named in an alert and the upstream team is asked (L18 fix `ask_upstream`). On the `late-file` night the same check names store centre. | code | A file that does not arrive sends no event, so the rule is a check on a schedule: three stores expected, two found. | every row or run | `batch_check.py` (`deadline_handler`) |
 | `not-converted` | Hold the file of store online; alert that its currency label is CAD and its average in CAD (4.05) is near 1/1.55 of its 7-day average (6.37). | code | Two comparisons: the label differs from the store's currency (EUR), and the ratio matches the fixed rate (the same ratio test as `verify()` in L18). | every row or run | `batch_check.py` |
 | `half-file` | Code holds the file (242 rows, 52 % below the usual 501). The agent then finds what is wrong with it and returns a cause and a fix for a person. | agent | No rule names this: the file is valid CSV, ids are unique, the average price is in range. Whether to ask for a new file or to accept a shorter list depends on what a read of the file shows (which products are missing). | every row or run | `batch_check.py` holds it; `half_file_agent.py` (Strands) names the cause; `verify` checks it |
+| `category-missing` | Code holds the file (463 rows, 7 % below the usual 496). The agent then finds what is wrong with it and returns a cause for a person. | agent | No rule names this: ids are unique, the average price is in range, and the missing products are spread over the file. What is missing shows only when the file is compared with an earlier one and with the products table. | every row or run | `batch_check.py` holds it; `half_file_agent.py` names the cause; `verify` checks it |
 | `late-file` | Propose one rerun of the day's partition (L18 fix `rerun_partition`), started once after a person approves. | code | One comparison: the file's `eventTime` is after the job's `StartedOn` for that day. | every row or run | `batch_check.py` (proposes the rerun; starting it is not built) |
 
 ## Catalog changes (EventBridge event of the Glue Data Catalog)
@@ -65,42 +66,38 @@ definition and compares it with the last one it stored; it never acts on the eve
 | Kind | Cases | Code | Agent |
 |---|---|---|---|
 | Price updates | 6 | 6 | 0 |
-| Batch files | 6 | 5 | 1 |
+| Batch files | 7 | 5 | 2 |
 | Catalog changes | 8 | 7 | 1 |
-| All | 20 | 18 | 2 |
+| All | 21 | 18 | 3 |
 
-Lens: 19 cases run on every row or run and 1 once at build time. No case sits under every request (no person
+Lens: 20 cases run on every row or run and 1 once at build time. No case sits under every request (no person
 is waiting for a reply). No case sits under every build yet: that column gets the tests of phase 2 (the behave
 scenarios for the code handlers and the evals of the two agents, run before a merge).
 
 One more agent trigger does not have a planted case of its own: a batch file that fails a check and matches none of the
-rules above. `half-file` is the example of it.
+rules above. `half-file` and `category-missing` are two examples of it.
 
 ## Model cases: what each reads and returns
 
-| | `half-file` | `new-column` |
+| | `half-file`, `category-missing` | `new-column` |
 |---|---|---|
 | Built as | bounded agent in Strands (`half_file_agent.py`): the model chooses each next tool call | one model call with a check in code and at most 2 retries (`column_drafter.py`, evaluator-optimizer); not an agent |
 | Starts when | `batch_check.py` returned `unsettled` for the file | `catalog_watch.py` returned `draft_description` |
-| Reads | three tools without arguments, each for the one file of the event: `summarize_file`, `previous_days`, `export_log` (the store's export log is a design for this demo) | code reads the column's name, type and 20 sample values and puts them in the user message |
-| Must return | `cause` from the fixed list in `results.py` (`no_fault`, `duplicate_rows`, `currency_not_converted`, `late_arrival`, `missing_input`, `partial_file`, `other`) and `evidence` | `description` and `sample_values_used`; code sets the status `draft` or `cannot_describe` |
-| Code checks | `verify`: the data shows the named cause. `partial_file` needs a short file, unique ids and every missing product after the last one present. A cause the data does not show gets the fix `escalate` | `validate`: at most 255 characters (the catalog's limit for a column comment), names the type, the values used are among the samples, no numbers or absolute claims beyond them |
+| Reads | four tools for the one store of the event, each returning what is stored and no comparison: `rows_per_product(day)` (the held file or one of the 7 days before), `list_files`, `export_log`, `product_categories` | code reads the column's name, type and 20 sample values and puts them in the user message |
+| Must return | `cause` from the fixed list in `results.py` (`no_fault`, `duplicate_rows`, `currency_not_converted`, `late_arrival`, `missing_input`, `partial_file`, `category_missing`, `other`) and `evidence` | `description` and `sample_values_used`; code sets the status `draft` or `cannot_describe` |
+| Code checks | `verify` reads the file, the store's file of the day before and the products table itself, not the tools' results or the evidence. A cause the data does not show gets the fix `escalate` | `validate`: at most 255 characters (the catalog's limit for a column comment), names the type, the values used are among the samples, no numbers or absolute claims beyond them |
 | A person | reads the cause, the evidence and the fix `ask_upstream` | accepts or edits the draft in `pending/`; nothing writes to the catalog |
-| Limits in code | 8 model calls, 6 tool calls, 600 s, in a Strands hook | 3 model calls for one column |
+| Limits in code | 8 model calls, 6 tool calls, 180 s, in a Strands hook | 3 model calls for one column |
 
-Two changes from the first plan. `partial_file` is new in the fixed list (the plan expected `other`), and the
-agent's prompt defines it; L18's `list_raw_objects` and `count_rows` are not used. And `new-column` keeps the
-verdict "agent" in the table above although it is built as one checked model call: the real split is 18 code,
-1 agent, 1 checked model call.
+`partial_file` and `category_missing` are in the fixed list because a person on call would name them ("the file
+is cut off", "the export dropped a category"). The two planted cases have different causes, so an agent that
+always names the same cause is right on one of two. `new-column` keeps the verdict "agent" in the table above
+although it is built as one checked model call: the real split is 18 code, 2 agent cases, 1 checked model call.
 
-Live run on the course LLM gateway, 2026-11-17, `qwen3.8-27b` (`output/smoke.json`): the agent read the three
-tools (the export log twice), named `partial_file`, and `verify` confirmed it: 4 model calls, 4 tool calls, 22 s.
-The drafter's first draft passed the check: 1 model call. This run shows the loop, the limits and the check
-working. It does not show that a model finds a cause nobody listed: the list names `partial_file`, and
-`summarize_file` returns the same fact that `verify` tests.
+LIVE_RUN_PLACEHOLDER
 
-A next step, not made: move `partial_file` into `batch_check.py` as a rule, so that the next half-size file is
-settled without a model call. That is how the runbook grows: a case the agent explained once becomes code.
+A next step, not made: move `partial_file` and `category_missing` into `batch_check.py` as rules, so that the next
+such file is settled without a model call. That is how the runbook grows: a case the agent explained once becomes code.
 
 ## Where this differs from L18's triage code
 

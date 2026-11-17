@@ -37,13 +37,13 @@ class Rejected(BaseModel):
 
 Verdict = Literal["pass", "hold", "rerun_needed", "unsettled"]
 Cause = Literal["no_fault", "duplicate_rows", "currency_not_converted", "late_arrival", "missing_input",
-                "partial_file", "other"]
+                "partial_file", "category_missing", "other"]
 Fix = Literal["none", "ask_upstream", "rerun_partition", "escalate"]
 # L18's FIXES, for the causes a file can show. currency_not_converted is a wrong label in the file here (L18: a
 # missing job argument), so its fix is a new file from the store, not a change to the job.
 FIXES: dict[str, str] = {"no_fault": "none", "duplicate_rows": "ask_upstream", "currency_not_converted": "ask_upstream",
                          "late_arrival": "rerun_partition", "missing_input": "ask_upstream",
-                         "partial_file": "ask_upstream", "other": "escalate"}
+                         "partial_file": "ask_upstream", "category_missing": "ask_upstream", "other": "escalate"}
 
 
 class FileFacts(BaseModel):
