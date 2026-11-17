@@ -97,10 +97,10 @@ although it is built as one checked model call: the real split is 18 code, 2 age
 Live eval on the course LLM gateway, 2026-11-17, `qwen3.8-27b`, one run, 7 of 16 model calls
 (`output/eval-live/`):
 
-| Case | Planted cause | Named | Model calls | Tool calls | How the run ended |
+| Planted cause | Case | Named | Model calls | Tool calls | How the run ended |
 |---|---|---|---|---|---|
-| `half-file` | `partial_file` | none | 4 | 6 | deadline of 180 s, while it was still reading files (the held file twice, two earlier days) |
-| `category-missing` | `category_missing` | none | 3 | 5 | the reply reached the maximum of output tokens before the JSON answer |
+| `partial_file` | `half-file` | none | 4 | 6 | deadline of 180 s, while it was still reading files (the held file twice, two earlier days) |
+| `category_missing` | `category-missing` | none | 3 | 5 | the reply reached the maximum of output tokens before the JSON answer |
 
 Accuracy 0 of 2; both files were escalated to a person, which is what the code does without a confirmed cause.
 The same model named `partial_file` in 22 s when the tool returned a ready comparison (`output/smoke.json`, the
