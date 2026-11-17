@@ -1,0 +1,13 @@
+{
+ "table": "prices_raw",
+ "column": "on_promotion",
+ "type": "boolean",
+ "status": "draft",
+ "description": "The on_promotion boolean column records whether a price entry is flagged as on promotion, with observed sample values false and true.",
+ "sample_values_used": [
+  "false",
+  "true"
+ ],
+ "attempts": 1,
+ "problems": []
+}

@@ -13,7 +13,7 @@ case, code checks the model's answer, a person approves a change.
 - **code**: a rule a team can write now settles the reaction. The rule reads a fixed set of values and its
   answer does not depend on what an earlier read showed.
 - **agent**: the next step depends on what a read shows, or the case is new and no rule names it. The agent gets
-  read-only tools, limits in code (L18: 10 tool calls, 12 model calls, 180 s) and must return a value from a
+  read-only tools, limits in code (here 6 tool calls, 8 model calls, 600 s) and must return a value from a
   fixed list; code checks that value against the data.
 
 The lens column says how often the reaction runs: every request, every row or run, every build, once at build time.
@@ -39,7 +39,7 @@ The handler runs when a file arrives, before the nightly job `curate-prices`. It
 |---|---|---|---|---|---|
 | `normal-day` | Mark the three files as checked; the job reads them. No alert, no model call. | code | All five values are inside their range. | every row or run | `batch_check.py` |
 | `duplicate-rows` | Hold the file of store centre, alert with the count of repeated `obs_id`; ask the store's export team for a new file. | code | `obs_id` is unique in a normal file (a second observation has its own id), so a repeated id is one `GROUP BY`. A row count of twice the usual confirms it. | every row or run | `batch_check.py` |
-| `missing-store` | At 01:55 list the day's prefix; a store without a file is named in an alert and the upstream team is asked (L18 fix `ask_upstream`). | code | A file that does not arrive sends no event, so the rule is a check on a schedule: three stores expected, two found. | every row or run | `batch_check.py` (`deadline_handler`) |
+| `missing-store` | At 01:55 list the day's prefix; a store without a file is named in an alert and the upstream team is asked (L18 fix `ask_upstream`). On the `late-file` night the same check names store centre. | code | A file that does not arrive sends no event, so the rule is a check on a schedule: three stores expected, two found. | every row or run | `batch_check.py` (`deadline_handler`) |
 | `not-converted` | Hold the file of store online; alert that its currency label is CAD and its average in CAD (4.05) is near 1/1.55 of its 7-day average (6.37). | code | Two comparisons: the label differs from the store's currency (EUR), and the ratio matches the fixed rate (the same ratio test as `verify()` in L18). | every row or run | `batch_check.py` |
 | `half-file` | Code holds the file (242 rows, 52 % below the usual 501). The agent then finds what is wrong with it and returns a cause and a fix for a person. | agent | No rule names this: the file is valid CSV, ids are unique, the average price is in range. Whether to ask for a new file or to accept a shorter list depends on what a read of the file shows (which products are missing). | every row or run | `batch_check.py` holds it; `half_file_agent.py` (Strands) names the cause; `verify` checks it |
 | `late-file` | Propose one rerun of the day's partition (L18 fix `rerun_partition`), started once after a person approves. | code | One comparison: the file's `eventTime` is after the job's `StartedOn` for that day. | every row or run | `batch_check.py` (proposes the rerun; starting it is not built) |
@@ -76,30 +76,28 @@ scenarios for the code handlers and the evals of the two agents, run before a me
 One more agent trigger does not have a planted case of its own: a batch file that fails a check and matches none of the
 rules above. `half-file` is the example of it.
 
-## Agent cases: what each reads and returns
+## Model cases: what each reads and returns
 
 | | `half-file` | `new-column` |
 |---|---|---|
-| Starts when | code held a file and no rule named the cause | code recorded a new column without a description |
-| Reads, with L18's tools | `list_raw_objects` (key, time and size for the day and the 7 days before), `count_rows` on `prices_raw` | `get_table_versions` |
-| Reads, with tools that do not exist yet | `summarize_file(key)`: rows, products, first and last product code, repeated ids, whether the last line is complete | `get_table_versions` extended to return each column's type and comment; `sample_column(table, column)`: at most 20 values |
-| Must return | `cause`: one of L18's `CAUSES`; `fix`: one of L18's `FIXES` values; `evidence`: short facts read. Expected here: `other`, `escalate` | `column`, `description` (at most 255 characters, the catalog's limit for a column comment), `status`: `draft` or `cannot_describe` |
-| Code checks | the file is outside its range, and the evidence names the store and the size or the missing products (as `escalate_ok()` in L18) | the column exists in the current definition; the length; `status` is from the list |
-| A person | reads the evidence and asks the export team for a new file | accepts or edits the draft; only then is it written to the catalog |
-| Limits in code | 10 tool calls, 12 model calls, 180 s (L18) | one draft per column; 3 tool calls |
+| Built as | bounded agent in Strands (`half_file_agent.py`): the model chooses each next tool call | one model call with a check in code and at most 2 retries (`column_drafter.py`, evaluator-optimizer); not an agent |
+| Starts when | `batch_check.py` returned `unsettled` for the file | `catalog_watch.py` returned `draft_description` |
+| Reads | three tools without arguments, each for the one file of the event: `summarize_file`, `previous_days`, `export_log` (the store's export log is a design for this demo) | code reads the column's name, type and 20 sample values and puts them in the user message |
+| Must return | `cause` from the fixed list in `results.py` (`no_fault`, `duplicate_rows`, `currency_not_converted`, `late_arrival`, `missing_input`, `partial_file`, `other`) and `evidence` | `description` and `sample_values_used`; code sets the status `draft` or `cannot_describe` |
+| Code checks | `verify`: the data shows the named cause. `partial_file` needs a short file, unique ids and every missing product after the last one present. A cause the data does not show gets the fix `escalate` | `validate`: at most 255 characters (the catalog's limit for a column comment), names the type, the values used are among the samples, no numbers or absolute claims beyond them |
+| A person | reads the cause, the evidence and the fix `ask_upstream` | accepts or edits the draft in `pending/`; nothing writes to the catalog |
+| Limits in code | 8 model calls, 6 tool calls, 600 s, in a Strands hook | 3 model calls for one column |
 
-As built, three things differ from the table above (phase 1's plan):
+Two changes from the first plan. `partial_file` is new in the fixed list (the plan expected `other`), and the
+agent's prompt defines it; L18's `list_raw_objects` and `count_rows` are not used. And `new-column` keeps the
+verdict "agent" in the table above although it is built as one checked model call: the real split is 18 code,
+1 agent, 1 checked model call.
 
-- **Causes.** The agent's fixed list is the file-level one in `results.py`: `no_fault`, `duplicate_rows`,
-  `currency_not_converted`, `late_arrival`, `missing_input`, `partial_file`, `other`. `partial_file` (fix
-  `ask_upstream`) is new; `verify` confirms it when the file is short, ids are unique and every missing product
-  sorts after the last one present. A cause the data does not show gets the fix `escalate`.
-- **Tools.** The agent has three tools, each for the one file of the event and without arguments:
-  `summarize_file`, `previous_days`, `export_log` (the store's export log is a design for this demo). L18's
-  `list_raw_objects` and `count_rows` are not used. Caps: 8 model calls, 6 tool calls, 600 s.
-- **Drafter.** `new-column` is one model call with a check in code and at most 2 retries (evaluator-optimizer),
-  not an agent with tools: the sample values are read by code and put in the user message. It returns
-  `description` and `sample_values_used`; the status `draft` or `cannot_describe` is set by code.
+Live run on the course LLM gateway, 2026-11-17, `qwen3.8-27b` (`output/smoke.json`): the agent read the three
+tools (the export log twice), named `partial_file`, and `verify` confirmed it: 4 model calls, 4 tool calls, 22 s.
+The drafter's first draft passed the check: 1 model call. This run shows the loop, the limits and the check
+working. It does not show that a model finds a cause nobody listed: the list names `partial_file`, and
+`summarize_file` returns the same fact that `verify` tests.
 
 A next step, not made: move `partial_file` into `batch_check.py` as a rule, so that the next half-size file is
 settled without a model call. That is how the runbook grows: a case the agent explained once becomes code.

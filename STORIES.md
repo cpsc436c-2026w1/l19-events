@@ -30,10 +30,10 @@ file at night and do not repair `prices_curated` in the morning.
 |---|---|---|---|---|
 | R010 | WHEN a file arrives in `prices_raw` THE SYSTEM SHALL compare its rows, repeated ids and average price with the 7 days before | within 60 s of arrival; 0 files held on a normal day | `normal-day` | code |
 | R020 | IF an `obs_id` appears more than once in a file THEN THE SYSTEM SHALL hold the file and report the count | 493 repeated ids reported | `duplicate-rows` | code |
-| R030 | IF a store's file has not arrived by 01:55 THEN THE SYSTEM SHALL alert and name the store | 1 store named, 5 minutes before the job | `missing-store` | code |
+| R030 | IF a store's file has not arrived by 01:55 THEN THE SYSTEM SHALL alert and name the store | 1 store named, 5 minutes before the job | `missing-store`, `late-file` | code |
 | R040 | IF a store's average price in CAD differs from its 7-day average by more than 8 % THEN THE SYSTEM SHALL hold the file | held before 02:00 | `not-converted` | code |
 | R050 | IF a file's row count differs from the usual by more than 5 % THEN THE SYSTEM SHALL hold the file | held before 02:00 | `half-file`, `duplicate-rows` | code |
-| R060 | IF a held file matches no rule THEN THE SYSTEM SHALL return a cause and a fix from the fixed lists, with the facts it read | at most 10 tool calls; the facts name the store | `half-file` | agent, checked by an eval |
+| R060 | IF a held file matches no rule THEN THE SYSTEM SHALL return a cause and a fix from the fixed lists, with the facts it read | at most 6 tool calls and 8 model calls; code confirms the cause against the file | `half-file` | agent, checked by an eval |
 | R070 | IF a file arrives after the day's job started THEN THE SYSTEM SHALL propose one rerun of that day and wait for approval | 1 rerun proposed, 0 started before approval | `late-file` | code |
 
 ## JS03 Analyst: a table I query changes
@@ -46,7 +46,7 @@ new column to have a description within a day, so that I do not write a query ag
 | R010 | WHEN a catalog event names a table THE SYSTEM SHALL store the table's current columns with name and type | within 5 minutes of the event | `new-table`, `new-partition` | code |
 | R020 | IF a column that `curate-prices` reads is missing or has another type THEN THE SYSTEM SHALL block the next run and alert | blocked before 02:00 | `renamed-column`, `type-change` | code |
 | R030 | IF a column that the job does not read is removed THEN THE SYSTEM SHALL alert the table's owners and not block the job | 1 alert, 0 runs blocked | `dropped-column` | code |
-| R040 | WHEN a table gets a new column THE SYSTEM SHALL draft a description and keep it as a draft until a person accepts it | at most 255 characters; 0 descriptions written without approval | `new-column` | agent, checked by an eval |
+| R040 | WHEN a table gets a new column THE SYSTEM SHALL draft a description and keep it as a draft until a person accepts it | at most 255 characters; 0 descriptions written without approval | `new-column` | one model call with a check in code; an eval for the wording |
 | R050 | IF an event arrives twice or out of order THEN THE SYSTEM SHALL end with the catalog's current definition and one alert | stored version 8; 1 alert for 3 events | `repeated-event` | code |
 | R060 | THE SYSTEM SHALL compare every table with its stored definition once a day | a change without an event is found within 24 hours | `no-event` | code |
 

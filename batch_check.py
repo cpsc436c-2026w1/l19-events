@@ -84,8 +84,10 @@ def handler(event: dict, context=None) -> list[dict]:
 
 
 def deadline_handler(event: dict, context=None) -> dict:
-    """On a schedule before the job: which stores have no file for the day? event: {"day": "2026-10-31"}."""
-    have = {k.rsplit("/", 1)[1].split("-export")[0] for k in LAKE.list_keys(f"prices_raw/day={event['day']}")}
+    """On a schedule before the job: which stores have no file for the day yet?
+    event: {"day": "2026-10-31", "time": "2026-10-31T01:55:00Z"} (the time the schedule fired)."""
+    have = {k.rsplit("/", 1)[1].split("-export")[0]
+            for k in LAKE.list_keys(f"prices_raw/day={event['day']}/", event["time"])}
     missing = sorted(set(STORE_CURRENCY) - have)
     return MissingVerdict(day=event["day"], missing_stores=missing, cause="missing_input" if missing else None,
                           fix=FIXES["missing_input"] if missing else None).model_dump()
@@ -98,6 +100,6 @@ if __name__ == "__main__":
         for e in LAKE.s3_events():
             for v in handler(e):
                 print(f"{case:15} {v['store']:7} {v['verdict']:13} {v['cause'] or '-':24} {'; '.join(v['reasons'])}")
-        missing = deadline_handler({"day": manifest()["day"]})
+        missing = deadline_handler({"day": manifest()["day"], "time": manifest()["day"] + "T01:55:00Z"})
         if missing["missing_stores"]:
             print(f"{case:15} at 01:55: no file from {missing['missing_stores']} -> {missing['fix']}")

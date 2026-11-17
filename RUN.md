@@ -6,12 +6,14 @@ commands and `smoke.py` call a model.
 ```
 uv sync
 uv run python make_events.py          # writes events/ again (the same bytes)
-uv run pytest                         # 63 tests, stub models only
+uv run pytest                         # stub models only
 ```
 
 ## Code handlers
 
-Each file has a Lambda-shaped `handler(event, context)` and prints one line per result when run.
+Each file has a Lambda-shaped `handler(event, context)` and prints one line per result when run. The results are
+pydantic models (`results.py`). `stream_window.handler` returns what Lambda requires for a tumbling window (the
+state); its typed rows (`WindowResult`, `Correction`, `Rejected`) go to the sink.
 
 | Event | Command | What it prints |
 |---|---|---|

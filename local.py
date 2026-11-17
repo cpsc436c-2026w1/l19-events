@@ -31,8 +31,9 @@ class LocalLake:
     def get_object(self, key: str) -> bytes:                        # S3 GetObject
         return (self.folder / key).read_bytes()
 
-    def list_keys(self, prefix: str) -> list[str]:                  # S3 ListObjectsV2
-        return sorted(p.relative_to(self.folder).as_posix() for p in (self.folder / prefix).glob("*.csv"))
+    def list_keys(self, prefix: str, at: str) -> list[str]:         # S3 ListObjectsV2, as the prefix is at time `at`
+        arrived = {object_key(r): r["eventTime"][:19] + "Z" for e in self.s3_events() for r in e["Records"]}
+        return sorted(k for k, t in arrived.items() if k.startswith(prefix) and t <= at)
 
     def baseline(self, store: str) -> dict:                         # the 7 days before: {"days": [...], "usual": {...}}
         return self.base["per_store"][store]

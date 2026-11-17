@@ -80,9 +80,11 @@ def test_batch_check_verdicts(case):
             assert v.cause == CAUSE[case] and v.reasons
     late = [v for v in verdicts if v.verdict == "rerun_needed"]
     assert all(v.needs_approval and v.fix == "rerun_partition" for v in late)
-    missing = batch_check.deadline_handler({"day": "2026-10-31"})
-    assert missing["missing_stores"] == (["online"] if case == "missing-store" else [])
-    assert missing["fix"] == ("ask_upstream" if case == "missing-store" else None)
+    missing = batch_check.deadline_handler({"day": "2026-10-31", "time": "2026-10-31T01:55:00Z"})
+    absent = {"missing-store": ["online"], "late-file": ["centre"]}.get(case, [])   # at 01:55 a late file is absent too
+    assert missing["missing_stores"] == absent and missing["fix"] == ("ask_upstream" if absent else None)
+    early = batch_check.deadline_handler({"day": "2026-10-31", "time": "2026-10-31T01:40:30Z"})
+    assert "online" in early["missing_stores"] and "north" not in early["missing_stores"]
 
 
 # ---- catalog_watch ------------------------------------------------------------------------------------------
