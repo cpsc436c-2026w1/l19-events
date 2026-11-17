@@ -3,7 +3,7 @@
 2026-11-17. Form as in `plans/2026-11-17-l19-stories-to-scenarios.md`:
 a job story becomes one feature, each requirement (one EARS line, R010, R020 ...) becomes at least one tagged
 scenario, and the planted case goes into the scenario's `Given`. The features are in `features/`;
-`check_traceability.py` fails when a story lacks a feature, a requirement lacks a scenario, or a tag names nothing. Case names are those of `events/manifest.json`.
+`check_traceability.py` fails when a story lacks a feature, a requirement lacks a scenario, or a tag does not name a story or a requirement. Case names are those of `events/manifest.json`.
 The numbers are targets chosen for this demo; the 5 % and 8 % ranges are L18's (`triage/world.py`).
 
 ## JS01 Store manager: price updates of my store

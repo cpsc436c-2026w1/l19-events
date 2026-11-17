@@ -94,7 +94,20 @@ is cut off", "the export dropped a category"). The two planted cases have differ
 always names the same cause is right on one of two. `new-column` keeps the verdict "agent" in the table above
 although it is built as one checked model call: the real split is 18 code, 2 agent cases, 1 checked model call.
 
-LIVE_RUN_PLACEHOLDER
+Live eval on the course LLM gateway, 2026-11-17, `qwen3.8-27b`, one run, 7 of 16 model calls
+(`output/eval-live/`):
+
+| Case | Planted cause | Named | Model calls | Tool calls | How the run ended |
+|---|---|---|---|---|---|
+| `half-file` | `partial_file` | none | 4 | 6 | deadline of 180 s, while it was still reading files (the held file twice, two earlier days) |
+| `category-missing` | `category_missing` | none | 3 | 5 | the reply reached the maximum of output tokens before the JSON answer |
+
+Accuracy 0 of 2; both files were escalated to a person, which is what the code does without a confirmed cause.
+The same model named `partial_file` in 22 s when the tool returned a ready comparison (`output/smoke.json`, the
+earlier agent). With tools that return only stored data (a map of 411 products per file, the products table),
+this model did not finish inside the limits. What the run supports: the limits and the escalation work; this
+agent is not ready for use. What to try next, each needing its own live run: a deadline of 600 s, a model with a
+larger output limit, or a tool that returns one file's product codes as a compact list.
 
 A next step, not made: move `partial_file` and `category_missing` into `batch_check.py` as rules, so that the next
 such file is settled without a model call. That is how the runbook grows: a case the agent explained once becomes code.

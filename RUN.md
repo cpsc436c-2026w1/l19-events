@@ -1,7 +1,7 @@
 # Run the L19 handlers and agents locally
 
 Everything runs on the generated files in `events/`. No AWS account is needed. Only the two `--model gateway`
-commands and `smoke.py` call a model.
+commands and the runs with `L19_LIVE=1` call a model.
 
 ```
 uv sync
@@ -61,7 +61,7 @@ export COURSE_MCP_TOKEN=...               # your course token
 uv run python half_file_agent.py --model gateway          # at most 8 model calls
 uv run python column_drafter.py --model gateway           # at most 3 model calls
 L19_LIVE=1 uv run python eval_held_file.py                # the eval live: 2 cases, at most 16 model calls
-uv run python gate.py output/eval-live --threshold 0.5
+uv run python gate.py output/eval-live --threshold 0.5    # the saved run of 2026-11-17 fails it: accuracy 0.00
 L19_LIVE=1 uv run behave --tags=eval                      # the same eval as a scenario
 ```
 

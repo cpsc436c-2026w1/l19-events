@@ -34,7 +34,8 @@ from results import FIXES, Cause, FileVerdict, TriageResult
 
 MAX_MODEL_CALLS = 8
 MAX_TOOL_CALLS = 6
-DEADLINE_S = 180          # as L18; the live run of 2026-11-17 took 22 s for 4 model calls
+DEADLINE_S = 180          # as L18. The live eval of 2026-11-17 ran out of it on one case after 4 model calls
+                          # (output/eval-live/): a live run needs more; no larger value has been tested
 CAUSES = get_args(Cause)
 
 AGENT_PROMPT = f"""You triage one export file that a check held before the nightly job reads it. Each store
