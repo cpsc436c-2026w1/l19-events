@@ -1,0 +1,3 @@
+two writers, 120 conditional writes on one item: 50 won (A 24, B 26), 70 lost, 0 other errors
+rounds with exactly one winner: 50 of 50
+final item: observed_at 2026-10-31T09:00:49Z (the newest sent: 2026-10-31T09:00:49Z), price 54.01, written by B-049

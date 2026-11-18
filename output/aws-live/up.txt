@@ -1,0 +1,3 @@
+region ca-central-1, function architecture arm64, zip 2611039 bytes
+direct invoke: 1 record counted, the window row is in the table
+event source mapping: {"State": "Enabled", "BatchSize": 10, "TumblingWindowInSeconds": 300, "BisectBatchOnFunctionError": true, "MaximumRetryAttempts": 1, "StartingPosition": "TRIM_HORIZON"}

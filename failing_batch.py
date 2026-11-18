@@ -13,9 +13,11 @@ invocation fails. With these settings on the event source mapping:
 Lambda developer guide: services-dynamodb-errors ("Retain discarded records for a DynamoDB event source"),
 services-ddb-batchfailurereporting ("Bisecting a batch"); API reference: UpdateEventSourceMapping. With the
 default settings a bad record can block its shard for up to one day (services-dynamodb-errors).
-Assumed, not read in the documentation: the order in which the two halves are retried (here: in stream order);
-that with MaximumRetryAttempts = 0 a single record that fails is discarded after that one invocation; and that
-the state of a tumbling window is kept from the last successful invocation when one fails.
+Not in the documentation, seen in a run on AWS on 2026-11-17 (output/aws-live/logs.txt, MaximumRetryAttempts = 1):
+the first half is retried before the second; a single record that fails is invoked once more and then discarded;
+after a failed invocation the next one gets the state of the last successful one. Also seen there and not
+simulated here: Lambda keeps a separate state for each shard of the stream, so one window has one last call
+per shard (aws/window_function.py).
 
 The state of a tumbling window comes back only from an invocation that succeeds, so a failed invocation leaves
 no count behind; the records before the bad one are applied when their half succeeds, once. A later delivery of

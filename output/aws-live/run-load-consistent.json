@@ -1,0 +1,14 @@
+{
+ "users": 50,
+ "seconds": 30.0,
+ "reads": 9107,
+ "writes": 112,
+ "consistent_read": true,
+ "p50_ms": 7.5,
+ "p99_ms": 95.4,
+ "max_ms": 356.4,
+ "stale_answers": 0,
+ "max_staleness_ms": 0.0,
+ "retried_reads": 0,
+ "client": "EC2 t4g.large in ca-central-1d"
+}

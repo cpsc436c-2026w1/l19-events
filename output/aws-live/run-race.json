@@ -1,0 +1,20 @@
+{
+ "writes": 120,
+ "won": {
+  "A": 24,
+  "B": 26
+ },
+ "lost": {
+  "A": 36,
+  "B": 34
+ },
+ "other_errors": [],
+ "rounds": 50,
+ "rounds_with_exactly_one_winner": 50,
+ "final_item": {
+  "observed_at": "2026-10-31T09:00:49Z",
+  "price": "54.01",
+  "update_id": "B-049"
+ },
+ "expected_observed_at": "2026-10-31T09:00:49Z"
+}

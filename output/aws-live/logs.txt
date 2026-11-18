@@ -1,0 +1,16 @@
+02:09:59 shard ..73a8 window 02:05:00 records 10 final False early False state_in 0 -> state_out 10
+02:09:59 shard ..9c0b window 02:05:00 records 1 final False early False state_in 0 -> state_out 1
+02:09:59 shard ..d6c4 window 02:05:00 records 7 final False early False state_in 0 -> raised KeyError
+02:09:59 shard ..d6c4 window 02:05:00 records 3 final False early False state_in 0 -> state_out 3
+02:09:59 shard ..d6c4 window 02:05:00 records 4 final False early False state_in 3 -> raised KeyError
+02:09:59 shard ..d6c4 window 02:05:00 records 2 final False early False state_in 3 -> raised KeyError
+02:09:59 shard ..d6c4 window 02:05:00 records 1 final False early False state_in 3 -> state_out 4
+02:09:59 shard ..d6c4 window 02:05:00 records 1 final False early False state_in 4 -> raised KeyError
+02:09:59 shard ..9843 window 02:05:00 records 2 final False early False state_in 0 -> state_out 2
+02:09:59 shard ..73a8 window 02:05:00 records 1 final False early False state_in 10 -> state_out 11
+02:10:00 shard ..d6c4 window 02:05:00 records 1 final False early False state_in 4 -> raised KeyError
+02:10:00 shard ..d6c4 window 02:05:00 records 2 final False early False state_in 4 -> state_out 6
+02:12:09 shard ..9c0b window 02:05:00 records 0 final True early False state_in 1 -> state_out 1
+02:12:10 shard ..9843 window 02:05:00 records 0 final True early False state_in 2 -> state_out 2
+02:12:10 shard ..73a8 window 02:05:00 records 0 final True early False state_in 11 -> state_out 11
+02:12:10 shard ..d6c4 window 02:05:00 records 0 final True early False state_in 6 -> state_out 6

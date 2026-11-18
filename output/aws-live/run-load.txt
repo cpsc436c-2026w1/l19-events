@@ -1,0 +1,3 @@
+client: EC2 t4g.large in ca-central-1d; table in ca-central-1; eventually consistent reads
+50 clients, 9290 reads and 114 writes in 30 s: p50 6.5 ms, p99 42.5 ms, slowest 255.1 ms; 0 reads retried
+stale answers: 0 of 9290; largest staleness 0.0 ms

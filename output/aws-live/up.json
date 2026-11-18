@@ -1,0 +1,18 @@
+{
+ "account": "123456789012",
+ "region": "ca-central-1",
+ "architecture": "arm64",
+ "stream_arn": "arn:aws:dynamodb:ca-central-1:123456789012:table/l19-prices/stream/2026-11-18T01:43:27.494",
+ "queue_url": "https://sqs.ca-central-1.amazonaws.com/123456789012/l19-failures",
+ "role_arn": "arn:aws:iam::123456789012:role/recipe-l19-events-lambda",
+ "zip_bytes": 2611039,
+ "smoke": "direct invoke: 1 record counted, the window row is in the table",
+ "mapping": {
+  "State": "Enabled",
+  "BatchSize": 10,
+  "TumblingWindowInSeconds": 300,
+  "BisectBatchOnFunctionError": true,
+  "MaximumRetryAttempts": 1,
+  "StartingPosition": "TRIM_HORIZON"
+ }
+}

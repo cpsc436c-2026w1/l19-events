@@ -23,7 +23,10 @@ Event source mapping settings, from the Lambda developer guide (read 2026-11-17)
     DestinationConfig.OnFailure        services-ddb-params: a standard SQS queue or SNS topic; the record describes
                                        the batch (sequence numbers), "the actual records aren't included"
 services-ddb-windows says tumbling windows "fully support the existing retry policies maxRetryAttempts and
-maxRecordAge". It does not mention bisecting or the on-failure destination: output/aws-live/ has what a run showed.
+maxRecordAge". It does not mention bisecting or the on-failure destination. What a run showed (output/aws-live/,
+2026-11-17): a failed batch of 7 was split (3 and 4, then 2 and 2, then 1 and 1), the record without a price failed
+twice alone and went to the queue with batchSize 1, and after a failed call the next call got the state of the last
+successful call of that shard. The state and the window's last call are per shard: 4 shards, 4 last calls.
 
 The role may do only what the function does (role_policy below). To use a role you already have, set
 LAMBDA_ROLE_ARN to its ARN; then no role is created and `down` leaves it alone.
@@ -257,7 +260,7 @@ def smoke_invoke(lam, ddb) -> str:
     record = json.loads((ROOT / "events" / "price-updates" / "window-event.json").read_text())["Records"][0]
     record["dynamodb"]["NewImage"]["store"] = {"S": "smoke"}
     window = {"start": "2026-10-31T09:15:00Z", "end": "2026-10-31T09:20:00Z"}
-    event = {"Records": [record], "window": window, "state": {}, "isFinalInvokeForWindow": False,
+    event = {"Records": [record], "window": window, "state": {}, "shardId": "smoke", "isFinalInvokeForWindow": False,
              "isWindowTerminatedEarly": False}
     state = {}
     for e in (event, {**event, "Records": [], "isFinalInvokeForWindow": True}):
@@ -266,7 +269,7 @@ def smoke_invoke(lam, ddb) -> str:
         if resp.get("FunctionError"):
             raise SystemExit(f"the function fails on a good record: {str(body)[:400]}")
         state = body["state"]
-    row = ddb.get_item(TableName=WINDOWS, Key={"pk": {"S": "window#smoke"}, "sk": {"S": window["start"]}},
+    row = ddb.get_item(TableName=WINDOWS, Key={"pk": {"S": "window#smoke"}, "sk": {"S": window["start"] + "#smoke"}},
                        ConsistentRead=True).get("Item")
     if not row or row["count"]["N"] != "1":
         raise SystemExit(f"the function ran but did not store its window row: {row}")
@@ -310,6 +313,19 @@ def down(c: dict | None = None, sleep=time.sleep) -> dict:
     return {"deleted": [k for k, v in found.items() if v is not None], "remaining": sorted(left)}
 
 
+def function_log(logs, since_s: int) -> list[str]:
+    """The lines the function printed (aws/window_function.py), oldest first, with the time of each."""
+    out, token = [], {}
+    while True:
+        page = logs.filter_log_events(logGroupName=f"/aws/lambda/{FUNCTION}", filterPattern='"L19 shard"',
+                                      startTime=int((time.time() - since_s) * 1000), **token)
+        out += [time.strftime("%H:%M:%S", time.gmtime(e["timestamp"] / 1000)) + " " + e["message"].strip()[4:]
+                for e in page["events"]]
+        if not page.get("nextToken"):
+            return out
+        token = {"nextToken": page["nextToken"]}
+
+
 # ---- the runs -------------------------------------------------------------------------------------------------
 
 def mask(text: str, account: str) -> str:
@@ -329,7 +345,7 @@ def emit(name: str, lines: list[str], account: str, data: dict | None = None) ->
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["up", "run-race", "run-batch", "run-load", "down"])
+    ap.add_argument("command", choices=["up", "update-code", "logs", "run-race", "run-batch", "run-load", "down"])
     ap.add_argument("--consistent", action="store_true", help="run-load: strongly consistent reads")
     ap.add_argument("--users", type=int, default=50)
     ap.add_argument("--seconds", type=float, default=30.0)
@@ -337,7 +353,15 @@ def main(argv: list[str] | None = None) -> None:
     c = clients_for()
     account = c["sts"].get_caller_identity()["Account"]
     run_id = uuid.uuid4().hex[:6]
-    if a.command == "up":
+    if a.command == "update-code":                                   # after a change to the function's files
+        c["lambda"].update_function_code(FunctionName=FUNCTION,
+                                         ZipFile=function_zip(vendor_pydantic(architecture())))
+        c["lambda"].get_waiter("function_updated_v2").wait(FunctionName=FUNCTION)
+        print(f"updated {FUNCTION}")
+    elif a.command == "logs":                                        # the function's own lines of the last 20 minutes
+        lines = function_log(c["logs"], since_s=1200)
+        emit("logs", lines or ["no lines"], account)
+    elif a.command == "up":
         out = up(c)
         emit("up", [f"region {out['region']}, function architecture {out['architecture']}, zip {out['zip_bytes']} bytes",
                     out.get("smoke", ""), f"event source mapping: {json.dumps(out['mapping'])}"], account, out)

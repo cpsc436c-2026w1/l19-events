@@ -130,8 +130,8 @@ def read_counts(ddb, windows_table: str, store: str) -> dict:
         return ddb.query(TableName=windows_table, KeyConditionExpression="pk = :p", ConsistentRead=True,
                          ExpressionAttributeValues={":p": {"S": f"{kind}#{store}"}})["Items"]
     windows, corrections = rows("window"), rows("correction")
-    return {"windows": [{"window_start": w["sk"]["S"], "count": int(w["count"]["N"]),
-                         "avg_price": float(w["avg_price"]["N"])} for w in windows],
+    return {"windows": [{"window_start": w["sk"]["S"].split("#")[0], "shard": w["sk"]["S"].split("#")[-1][-4:],
+                         "count": int(w["count"]["N"]), "avg_price": float(w["avg_price"]["N"])} for w in windows],
             "counted": sum(int(w["count"]["N"]) for w in windows) + len(corrections),
             "corrections": len(corrections)}
 
@@ -169,7 +169,8 @@ def batch_lines(written: dict, got: dict) -> list[str]:
     if not got["observed"]:
         lines.append(f"NOT OBSERVED before the deadline: {got['counted']} counted, {len(got['failures'])} queue records")
     lines.append(f"window table: {got['counted']} of {written['good']} good updates counted "
-                 f"({len(got['windows'])} window rows, {got['corrections']} corrections): "
+                 f"({len(got['windows'])} rows, one per window and shard: "
+                 f"{' + '.join(str(w['count']) for w in got['windows']) or '0'}; {got['corrections']} corrections): "
                  f"{'each once' if got['counted'] == written['good'] else 'MISMATCH'}")
     for f in got["failures"]:
         b, c = f.get("DDBStreamBatchInfo", {}), f.get("requestContext", {})

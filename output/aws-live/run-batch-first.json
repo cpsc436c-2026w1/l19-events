@@ -1,0 +1,55 @@
+{
+ "written": {
+  "store": "batch-d61143",
+  "good": 20,
+  "bad_position": 11,
+  "written_at": "2026-11-18T01:44:05Z",
+  "epoch": 1794966245.2343278,
+  "expected_sum": 101.0
+ },
+ "observed": false,
+ "waited_s": 674,
+ "windows": [
+  {
+   "window_start": "2026-11-18T01:40:00Z",
+   "count": 6,
+   "avg_price": 4.83
+  }
+ ],
+ "counted": 6,
+ "corrections": 0,
+ "failures": [
+  {
+   "requestContext": {
+    "requestId": "626838e5-3713-443f-bb8c-a90dc6a318b2",
+    "functionArn": "arn:aws:lambda:ca-central-1:123456789012:function:l19-window",
+    "condition": "RetryAttemptsExhausted",
+    "approximateInvokeCount": 2
+   },
+   "responseContext": {
+    "statusCode": 200,
+    "executedVersion": "$LATEST",
+    "functionError": "Unhandled"
+   },
+   "version": "1.0",
+   "timestamp": "2026-11-18T01:44:52.308Z",
+   "DDBStreamBatchInfo": {
+    "shardId": "shardId-00000001794966210382-3500d6c4",
+    "startSequenceNumber": "8200003976186950913089",
+    "endSequenceNumber": "8200003976186950913089",
+    "approximateArrivalOfFirstRecord": "2026-11-18T01:44:05Z",
+    "approximateArrivalOfLastRecord": "2026-11-18T01:44:05Z",
+    "batchSize": 1,
+    "streamArn": "arn:aws:dynamodb:ca-central-1:123456789012:table/l19-prices/stream/2026-11-18T01:43:27.494"
+   },
+   "timeWindowInfo": {
+    "window": {
+     "start": "2026-11-18T01:40:00Z",
+     "end": "2026-11-18T01:45:00Z"
+    },
+    "isFinalInvokeForWindow": false,
+    "isWindowTerminatedEarly": false
+   }
+  }
+ ]
+}

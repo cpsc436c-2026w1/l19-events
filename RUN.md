@@ -26,6 +26,69 @@ uv run python replay.py --no-dedupe        # a function without the duplicate ch
 file's header says what changes on DynamoDB). `failing_batch.py` simulates what Lambda does with the event source
 mapping settings named in its header.
 
+## The same cases on AWS
+
+Three cases run on real services in your sandbox. `README.md`, "AWS permissions", lists what your credentials
+need. The offline demos above say "simulated" where they play Lambda's part; these do not simulate anything.
+
+1. Sign in to your sandbox and pick the Region:
+
+   ```
+   export AWS_PROFILE=<your profile>
+   export AWS_REGION=ca-central-1
+   aws sts get-caller-identity
+   ```
+
+2. Create the resources (two tables, a queue, a role, a function, an event source mapping). It ends by calling
+   the function once directly, so a broken function shows here:
+
+   ```
+   uv run python -m aws.deploy up
+   ```
+
+3. Run the cases, in any order:
+
+   ```
+   uv run python -m aws.deploy run-race              # two writers at once
+   uv run python -m aws.deploy run-batch             # a failing record; waits for the 5-minute window to end
+   uv run python -m aws.deploy run-load              # 50 clients, eventually consistent reads
+   uv run python -m aws.deploy run-load --consistent # the same with strongly consistent reads
+   ```
+
+4. Delete everything. The command lists what it deleted and exits with an error if anything remains:
+
+   ```
+   uv run python -m aws.deploy down
+   ```
+
+In a student lease:
+
+- Lambda runs at most 10 function instances at once in the whole account. This function uses one (one shard of
+  the stream, one batch at a time), and the script does not reserve concurrency.
+- If the lease does not let you create roles, set `LAMBDA_ROLE_ARN` to the lease's Lambda role before `up`.
+- `up` builds the function's zip with `uv pip install --target build/lambda` for Linux and this machine's
+  processor type; `L19_ARCH=x86_64` or `arm64` overrides it.
+- Run `down` before the lease ends. A second `up` keeps what is there.
+
+The same three as scenarios: `uv run behave --tags=live` (after `up`; it waits for one window).
+`uv run python -m aws.deploy logs` prints one line per invocation of the function (shard, records, state in and out).
+
+A saved run from 2026-11-17 (instructor sandbox, ca-central-1, client on an EC2 instance in the same Region) is in
+`output/aws-live/`:
+
+| Case | Result |
+|---|---|
+| Two writers | 120 conditional writes on one item: 50 won, 70 lost; 50 of 50 rounds had exactly one winner; the final item is the newest |
+| Failing batch | 20 of 20 good updates counted once; the record without a price reached the queue alone (`batchSize` 1) after 2 invocations |
+| Many queries, eventually consistent | 50 clients, 9,290 reads in 30 s: p50 6.5 ms, p99 42.5 ms; 0 stale answers |
+| Many queries, strongly consistent | 50 clients, 9,107 reads in 30 s: p50 7.5 ms, p99 95.4 ms; 0 stale answers |
+
+What the failing-batch run showed that the local simulation does not: the new table's stream had 4 shards, and
+Lambda keeps the window's state for each shard and makes the window's last call once per shard. The first version
+of the function wrote one row per window, the 4 last calls overwrote each other, and the table showed 6 and then
+2 of 20 updates (`run-batch-first.txt`, `run-batch-second.txt`, `logs-second.txt`). The function now writes one
+row per window and shard, and a reader adds them (`run-batch.txt`, `logs.txt`).
+
 ## Code handlers
 
 Each file has a Lambda-shaped `handler(event, context)` and prints one line per result when run. The results are

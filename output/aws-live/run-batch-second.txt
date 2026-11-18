@@ -1,0 +1,4 @@
+wrote 20 good updates and 1 without a price (position 11) to store batch-262acf; waited 674 s
+NOT OBSERVED before the deadline: 2 counted, 1 queue records
+window table: 2 of 20 good updates counted (1 window rows, 0 corrections): MISMATCH
+on-failure queue: condition RetryAttemptsExhausted, invoke count 2, batchSize 1, sequence numbers 54900002997836103404672 to 54900002997836103404672

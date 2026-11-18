@@ -1,0 +1,74 @@
+{
+ "written": {
+  "store": "batch-2a35b9",
+  "good": 20,
+  "bad_position": 11,
+  "written_at": "2026-11-18T02:09:58Z",
+  "epoch": 1794967798.8303776,
+  "expected_sum": 101.0
+ },
+ "observed": true,
+ "waited_s": 145,
+ "windows": [
+  {
+   "window_start": "2026-11-18T02:05:00Z",
+   "shard": "9843",
+   "count": 2,
+   "avg_price": 5.05
+  },
+  {
+   "window_start": "2026-11-18T02:05:00Z",
+   "shard": "73a8",
+   "count": 11,
+   "avg_price": 5.19
+  },
+  {
+   "window_start": "2026-11-18T02:05:00Z",
+   "shard": "9c0b",
+   "count": 1,
+   "avg_price": 4.8
+  },
+  {
+   "window_start": "2026-11-18T02:05:00Z",
+   "shard": "d6c4",
+   "count": 6,
+   "avg_price": 4.83
+  }
+ ],
+ "counted": 20,
+ "corrections": 0,
+ "failures": [
+  {
+   "requestContext": {
+    "requestId": "61506627-ea72-4a9f-971c-8eb84d8557a8",
+    "functionArn": "arn:aws:lambda:ca-central-1:123456789012:function:l19-window",
+    "condition": "RetryAttemptsExhausted",
+    "approximateInvokeCount": 2
+   },
+   "responseContext": {
+    "statusCode": 200,
+    "executedVersion": "$LATEST",
+    "functionError": "Unhandled"
+   },
+   "version": "1.0",
+   "timestamp": "2026-11-18T02:10:00.093Z",
+   "DDBStreamBatchInfo": {
+    "shardId": "shardId-00000001794966210382-3500d6c4",
+    "startSequenceNumber": "99500000308333657574055",
+    "endSequenceNumber": "99500000308333657574055",
+    "approximateArrivalOfFirstRecord": "2026-11-18T02:09:58Z",
+    "approximateArrivalOfLastRecord": "2026-11-18T02:09:58Z",
+    "batchSize": 1,
+    "streamArn": "arn:aws:dynamodb:ca-central-1:123456789012:table/l19-prices/stream/2026-11-18T01:43:27.494"
+   },
+   "timeWindowInfo": {
+    "window": {
+     "start": "2026-11-18T02:05:00Z",
+     "end": "2026-11-18T02:10:00Z"
+    },
+    "isFinalInvokeForWindow": false,
+    "isWindowTerminatedEarly": false
+   }
+  }
+ ]
+}

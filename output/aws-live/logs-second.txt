@@ -1,0 +1,16 @@
+01:56:26 window 01:55:00 records 1 final False early False state_in 0 -> state_out 1
+01:56:26 window 01:55:00 records 10 final False early False state_in 0 -> state_out 10
+01:56:26 window 01:55:00 records 7 final False early False state_in 0 -> raised KeyError
+01:56:26 window 01:55:00 records 3 final False early False state_in 0 -> state_out 3
+01:56:26 window 01:55:00 records 4 final False early False state_in 3 -> raised KeyError
+01:56:26 window 01:55:00 records 2 final False early False state_in 3 -> raised KeyError
+01:56:26 window 01:55:00 records 1 final False early False state_in 3 -> state_out 4
+01:56:26 window 01:55:00 records 1 final False early False state_in 4 -> raised KeyError
+01:56:27 window 01:55:00 records 1 final False early False state_in 10 -> state_out 11
+01:56:27 window 01:55:00 records 1 final False early False state_in 4 -> raised KeyError
+01:56:27 window 01:55:00 records 2 final False early False state_in 4 -> state_out 6
+01:56:27 window 01:55:00 records 2 final False early False state_in 0 -> state_out 2
+02:02:06 window 01:55:00 records 0 final True early False state_in 1 -> state_out 1
+02:02:07 window 01:55:00 records 0 final True early False state_in 11 -> state_out 11
+02:02:07 window 01:55:00 records 0 final True early False state_in 6 -> state_out 6
+02:02:07 window 01:55:00 records 0 final True early False state_in 2 -> state_out 2
