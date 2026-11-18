@@ -24,6 +24,9 @@ needed, except for the section "On AWS" below. Only the commands marked live cal
 2. `git clone https://github.com/cpsc436c-2026w1/l19-events.git`, then `cd l19-events`.
 3. `uv sync`, then `uv run pytest` (stub models only, no network).
 4. For the live commands, put your course token in `.env` as `KB_MCP_TOKEN=<your token>` (the file is git-ignored).
+5. `aws.deploy agent-up` puts your course token in the Lambda function's environment, where anyone who may read the
+   function in that AWS account can see it. In a team lease that is your whole team: run `agent-down` when you are
+   done, and for anything that stays deployed, keep the token in Secrets Manager instead.
 
 All commands, with what you should see: [`RUN.md`](RUN.md).
 

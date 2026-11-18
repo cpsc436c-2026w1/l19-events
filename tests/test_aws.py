@@ -60,7 +60,7 @@ def test_names_and_zip(tmp_path):
     (tmp_path / "pydantic" / "__init__.py").write_text("")
     names = zipfile.ZipFile(io.BytesIO(deploy.function_zip(tmp_path))).namelist()
     assert set(names) == {"stream_window.py", "inputs.py", "results.py", "window_function.py", "pydantic/__init__.py"}
-    assert deploy.mask("arn:aws:sqs:ca-central-1:322614675581:q", "322614675581").count("123456789012") == 1
+    assert deploy.mask("arn:aws:sqs:ca-central-1:111122223333:q", "111122223333").count("123456789012") == 1
 
 
 # ---- up and down on moto ------------------------------------------------------------------------------------
