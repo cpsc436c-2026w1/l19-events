@@ -1,6 +1,7 @@
 """Every job story has a feature, every requirement and constraint has a scenario, and every tag names something.
 
-Reads STORIES.md (a heading `## JS01 ...` per job story, a table row `| R010 | ...` per requirement) and the
+Reads STORIES.md (a heading `## JS01 ...` per job story, a table row `| R010 | ...` per requirement; a team's own
+numbering R10, R20 ... with sub-requirements R11, R21 is read too) and the
 behave features (a feature tagged @JS01, its scenarios tagged @R010). Requirement numbers start again in each
 story, so a scenario's @R tag is read inside its feature's story.
 
@@ -22,7 +23,8 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 OTHER_TAGS = {"eval", "limits", "live"}   # the only tags allowed beside @JSnn, @Rnn0, @RFnn0 and @RQnn0
 SECTION = "## Constraints and requests"
-CODE = r"JS\d\d|R\d{3}|R[FQ]\d{3}"
+REQ = r"R0\d{2}|R[1-9]\d+"                # R010, R020 ... or the teams' R10, R11, R20 ...; not R06
+CODE = rf"JS\d\d|{REQ}|R[FQ]\d{{3}}"
 
 
 def stories(text: str) -> dict[str, list[str]]:
@@ -33,7 +35,7 @@ def stories(text: str) -> dict[str, list[str]]:
             out[current] = []
         elif line.startswith("## "):
             current = None
-        elif current and (m := re.match(r"\| (R\d{3}) \|", line)):
+        elif current and (m := re.match(rf"\| ({REQ}) \|", line)):
             out[current].append(m.group(1))
     return out
 
@@ -114,7 +116,7 @@ def check(stories_text: str, feats: list[dict]) -> tuple[list[str], dict]:
             if odd:
                 problems.append(f"{f['file']}: '{name}' has tags that name nothing: {odd}")
         for sc in f["scenarios"]:
-            rs = [t for t in sc["tags"] + f["tags"] if re.fullmatch(r"R\d{3}", t)]
+            rs = [t for t in sc["tags"] + f["tags"] if re.fullmatch(REQ, t)]
             if not rs and not any(re.fullmatch(r"RF\d{3}", t) for t in sc["tags"] + f["tags"]):
                 problems.append(f"{f['file']}: scenario '{sc['name']}' has no @R tag and no @RF tag")
             for r in rs:

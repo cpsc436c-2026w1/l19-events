@@ -113,3 +113,24 @@ def test_without_the_section_an_rf_tag_names_nothing():
 def test_the_repository_lists_its_constraints_and_requests():
     rf_problems, rf, rq = T.check_constraints((ROOT / "STORIES.md").read_text(), T.features(ROOT / "features"))
     assert rf_problems == [] and rf == {"RF010": 1, "RF020": 1} and list(rq) == ["RQ010"]
+
+
+# ---- the teams' own numbering: R10, R20 ... with sub-requirements R11, R21, beside R010 -------------------
+
+TEAM = "## JS01 A story\n| R10 | x |\n| R11 | x, part |\n| R20 | y |\n| R010 | z |\n"
+
+
+def test_the_teams_numbering_is_read():
+    assert T.stories(TEAM) == {"JS01": ["R10", "R11", "R20", "R010"]}
+
+
+def test_r10_r11_and_r010_tags_trace_to_their_requirements():
+    feats = [_feat(["JS01"], ("a", ["R10"]), ("b", ["R11"]), ("c", ["R20", "R010"]))]
+    problems, covered = T.check(TEAM, feats)
+    assert problems == [] and covered == {"JS01": {"R10": 1, "R11": 1, "R20": 1, "R010": 1}}
+
+
+def test_a_team_code_without_a_scenario_or_unknown_fails():
+    feats = [_feat(["JS01"], ("a", ["R10"]), ("b", ["R20", "R010", "R30"]))]
+    problems, _ = T.check(TEAM, feats)
+    assert problems == ["f.feature: @R30 on 'b' names no requirement of JS01", "JS01 R11: no scenario is tagged @R11"]
