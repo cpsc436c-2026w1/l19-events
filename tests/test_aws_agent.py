@@ -136,7 +136,7 @@ def test_up_run_down_on_moto(c, tmp_path):
     assert note["Id"] == "new-raw-file"
     # the run: uploads, then (here) results written by hand, as the function would
     ticks = iter(range(0, 10000, 5))
-    r = agent.run(c, REGION, deadline_s=20, sleep=lambda s: None, clock=lambda: next(ticks))
+    r = agent.run(c, REGION, deadline_s=20, control_deadline_s=20, sleep=lambda s: None, clock=lambda: next(ticks))
     # no function runs on moto: the control file gets no result, so the planted files are not uploaded
     assert r["results"] == {} and "not uploaded" in r["stopped"] and any("STOPPED" in x for x in agent.run_lines(r, {}))
     keys = [o["Key"] for o in c["s3"].list_objects_v2(Bucket=out["bucket"])["Contents"]]
@@ -147,7 +147,7 @@ def test_up_run_down_on_moto(c, tmp_path):
     real_delete = c["s3"].delete_object
     c["s3"].delete_object = lambda **kw: None if kw["Key"].endswith("online.json") else real_delete(**kw)
     ticks = iter(range(0, 100000, 5))
-    r = agent.run(c, REGION, deadline_s=20, sleep=lambda s: None, clock=lambda: next(ticks))
+    r = agent.run(c, REGION, deadline_s=20, control_deadline_s=20, sleep=lambda s: None, clock=lambda: next(ticks))
     c["s3"].delete_object = real_delete
     assert r["control"]["model_calls"] == 0 and r["results"] == {}
     assert any("NO RESULT" in line for line in agent.run_lines(r, {}))
