@@ -57,3 +57,8 @@ def test_the_rf010_scenario_passes_with_dedupe_and_fails_without_it():
     assert off.returncode != 0
     assert "window 09:25, store centre: expected count 1 (the simulator's truth), actual count 2" in off.stdout
     assert "store online: expected count 4 (the simulator's truth), actual count 7" in off.stdout
+
+
+def test_the_rf020_scenario_passes():
+    run = _behave("@RF020", None)
+    assert run.returncode == 0 and "1 scenario passed" in run.stdout, run.stdout

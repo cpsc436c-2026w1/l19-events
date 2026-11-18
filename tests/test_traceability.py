@@ -112,4 +112,4 @@ def test_without_the_section_an_rf_tag_names_nothing():
 
 def test_the_repository_lists_its_constraints_and_requests():
     rf_problems, rf, rq = T.check_constraints((ROOT / "STORIES.md").read_text(), T.features(ROOT / "features"))
-    assert rf_problems == [] and rf == {"RF010": 1} and list(rq) == ["RQ010"]
+    assert rf_problems == [] and rf == {"RF010": 1, "RF020": 1} and list(rq) == ["RQ010"]

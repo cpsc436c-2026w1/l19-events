@@ -80,6 +80,7 @@ The scenarios are in `features/js01_constraints.feature`.
 | Code | Constraint or request | Tested by |
 |---|---|---|
 | RF010 | Every price update must be counted exactly once, even when the stream delivers it twice. | `redelivered-update` |
+| RF020 | An update that arrives after its window closed must still count in the window of its event time. | `late-update` |
 | RQ010 | The design names who reads the list of rejected updates and how often. | read, not run |
 
 ## What the mapping shows
