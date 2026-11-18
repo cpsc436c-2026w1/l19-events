@@ -53,3 +53,58 @@ def test_eval_on_the_stub_and_the_gate(tmp_path, monkeypatch):
     monkeypatch.setattr(eval_held_file.half_file_agent, "stub_model", always)
     eval_held_file.run(log_dir=tmp_path / "same")
     assert gate.passes(tmp_path / "same", 1.0) == (False, 0.5)
+
+
+# ---- constraints (RF) and requests (RQ) from the feedback --------------------------------------------------
+
+CONSTRAINTS = ("## Constraints and requests\n| Code | Text |\n|---|---|\n"
+               "| RF010 | counted once |\n| RF020 | late counts |\n| RQ010 | write it down |\n")
+
+
+def test_constraints_and_requests_are_read_from_their_section():
+    assert T.constraints(STORIES + CONSTRAINTS) == {"RF": ["RF010", "RF020"], "RQ": ["RQ010"]}
+    assert T.constraints(STORIES) == {"RF": [], "RQ": []}
+    assert T.stories(STORIES + CONSTRAINTS) == T.stories(STORIES)     # the section's rows are not requirements
+
+
+def test_every_constraint_has_a_scenario_and_a_request_needs_none():
+    feats = [_feat(["JS01"], ("a", ["R010", "RF010"]), ("b", ["R020"]), ("c", ["RF020"]), ("d", ["RF020"])),
+             _feat(["JS02"], ("e", ["R010"]))]
+    problems, covered = T.check(STORIES + CONSTRAINTS, feats)
+    assert problems == []
+    assert T.check_constraints(STORIES + CONSTRAINTS, feats)[1:] == ({"RF010": 1, "RF020": 2}, {"RQ010": 0})
+
+
+def test_a_constraint_without_a_scenario_fails():
+    feats = [_feat(["JS01"], ("a", ["R010", "RF010"]), ("b", ["R020"])), _feat(["JS02"], ("e", ["R010"]))]
+    problems, _ = T.check(STORIES + CONSTRAINTS, feats)
+    assert problems == ["RF020: no scenario is tagged @RF020"]
+
+
+def test_a_scenario_may_carry_an_rf_tag_instead_of_an_r_tag_and_an_rq_tag_beside_it():
+    feats = [_feat(["JS01"], ("a", ["R010"]), ("b", ["R020"]), ("c", ["RF010", "RQ010"]), ("d", ["RF020"])),
+             _feat(["JS02"], ("e", ["R010"]))]
+    assert T.check(STORIES + CONSTRAINTS, feats)[0] == []
+
+
+def test_an_rq_tag_alone_does_not_make_a_scenario_traceable():
+    feats = [_feat(["JS01"], ("a", ["R010", "RF010", "RF020"]), ("b", ["R020"]), ("c", ["RQ010"])),
+             _feat(["JS02"], ("e", ["R010"]))]
+    problems, _ = T.check(STORIES + CONSTRAINTS, feats)
+    assert problems == ["f.feature: scenario 'c' has no @R tag and no @RF tag"]
+
+
+def test_an_unknown_or_malformed_constraint_tag_fails():
+    feats = [_feat(["JS01"], ("a", ["R010", "RF010", "RF020"]), ("b", ["R020", "RF090"]), ("c", ["R010", "RQ020"]),
+                   ("d", ["R010", "RF01"])), _feat(["JS02"], ("e", ["R010"]))]
+    problems, _ = T.check(STORIES + CONSTRAINTS, feats)
+    assert len(problems) == 3
+    assert "RF01" in problems[0] and "RF090" in problems[1] and "RQ020" in problems[2]
+    assert "names no constraint or request" in problems[1]
+
+
+def test_without_the_section_an_rf_tag_names_nothing():
+    feats = [_feat(["JS01"], ("a", ["R010", "RF010"]), ("b", ["R020"])), _feat(["JS02"], ("e", ["R010"]))]
+    problems, _ = T.check(STORIES, feats)
+    assert problems == ["f.feature: @RF010 on 'a' names no constraint or request in STORIES.md"]
+
