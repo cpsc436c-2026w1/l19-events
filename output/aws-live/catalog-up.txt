@@ -1,0 +1,3 @@
+Glue table l19_catalog.l19_prices_raw, bucket l19-catalog-123456789012-ca-central-1, function l19-catalog (zip 32443894 bytes), model gateway
+direct call: {'ok': True, 'token_set': True}
+rules: l19-catalog-change (Glue table changes), l19-catalog-daily (once a day)

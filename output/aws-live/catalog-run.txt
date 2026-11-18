@@ -1,0 +1,6 @@
+first daily check: table recorded, 0 drafts, 0 model calls
+event: UpdateTable added on_promotion; draft written 9.8 s later; status draft, valid on try 1, 1 model calls
+  description: The on_promotion column is a boolean field indicating whether a price record is marked as on promotion.
+daily check: unit added with the rule off (no event reached the function: True); found by the daily check; status draft, valid on try 1, 1 model calls
+  description: The string column unit records the unit of measure for a price entry, with observed values including each, kg, 100 g, and L.
+comments written to the Glue Data Catalog: 0; model calls: 2 of at most 4

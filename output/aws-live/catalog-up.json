@@ -1,0 +1,14 @@
+{
+ "account": "123456789012",
+ "region": "ca-central-1",
+ "bucket": "l19-catalog-123456789012-ca-central-1",
+ "architecture": "arm64",
+ "zip_bytes": 32443894,
+ "model": "gateway",
+ "ping": {
+  "ok": true,
+  "token_set": true
+ },
+ "database": "l19_catalog",
+ "table": "l19_prices_raw"
+}

@@ -55,7 +55,9 @@ need. The offline demos above say "simulated" where they play Lambda's part; the
    uv run python -m aws.deploy run-load --consistent # the same with strongly consistent reads
    ```
 
-4. Delete everything. The command lists what it deleted and exits with an error if anything remains:
+4. Delete everything. The command lists what it deleted and exits with an error if anything remains.
+   Lambda can write its last log lines after its log group was deleted, which creates the group again: `down`
+   deletes it once more, and running `down` a second time a minute later is harmless:
 
    ```
    uv run python -m aws.deploy down
@@ -90,6 +92,30 @@ a few seconds after the trigger was configured started nothing, and the same upl
 Run the three one after another: the token stays readable in the function's configuration until `agent-down`.
 `uv run behave --tags=live` includes a scenario for this case, and that scenario spends model calls.
 
+### A catalog change
+
+A Glue table gets a new column. Glue sends an event to EventBridge, a rule starts a function, the function drafts
+a description (one model call, a check in code, at most two retries) and writes it to `pending/` in an S3 bucket
+for a person. Nothing is written to the Glue Data Catalog. Glue sends these events best effort, so `catalog-run`
+also adds a column while the rule is off and lets the daily check find it. At most 4 model calls.
+
+```
+export COURSE_MCP_TOKEN=...
+uv run python -m aws.deploy catalog-up        # Glue database and table, bucket, role, function, two rules
+uv run python -m aws.deploy catalog-run       # an event's column, then a column only the daily check finds
+uv run python -m aws.deploy catalog-down
+```
+
+A saved run from 2026-11-17 (`output/aws-live/catalog-run.txt`, model `qwen3.8-27b`, 2 model calls):
+
+| Column | Found by | From `UpdateTable` to the draft | Valid on try | Written to the catalog |
+|---|---|---|---|---|
+| `on_promotion` (boolean) | the event | 9.8 s | 1 | no |
+| `unit` (string) | the daily check, with the rule off | when the check ran | 1 | no |
+
+The sample values the model sees come from files `catalog-up` puts in the bucket; a real system would read them
+from the table's data.
+
 In a student lease:
 
 - Lambda runs at most 10 function instances at once in the whole account. This function uses one per shard of
@@ -101,8 +127,8 @@ In a student lease:
 
 The same three as scenarios: `uv run behave --tags=live` (after `up`; it waits for one window).
 `uv run python -m aws.deploy logs` prints one line per invocation of the function (shard, records, state in and out);
-`uv run python -m aws.deploy update-code` uploads the function again after you change its files. The live scenarios
-were written with the run and have not been run through behave yet.
+`uv run python -m aws.deploy update-code` uploads the function again after you change its files. The four live
+scenarios passed against AWS on 2026-11-17 (`output/aws-live/behave-live.txt`, 8 minutes).
 
 A saved run from 2026-11-17 (instructor sandbox, ca-central-1, client on an EC2 instance in the same Region) is in
 `output/aws-live/`:

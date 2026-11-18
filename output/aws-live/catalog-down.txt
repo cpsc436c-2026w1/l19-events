@@ -1,0 +1,2 @@
+deleted: bucket l19-catalog-123456789012-ca-central-1, glue database l19_catalog, function l19-catalog, role recipe-l19-events-catalog, rule l19-catalog-change, rule l19-catalog-daily, log group /aws/lambda/l19-catalog
+remaining: none

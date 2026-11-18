@@ -1,0 +1,58 @@
+{
+ "first_daily_check": {
+  "drafts": 0,
+  "model_calls": 0
+ },
+ "event": {
+  "column": "on_promotion",
+  "arrived": true,
+  "seconds_from_update_table_to_draft": 9.8,
+  "draft": {
+   "table": "l19_prices_raw",
+   "column": "on_promotion",
+   "type": "boolean",
+   "status": "draft",
+   "description": "The on_promotion column is a boolean field indicating whether a price record is marked as on promotion.",
+   "sample_values_used": [
+    "false",
+    "true"
+   ],
+   "attempts": 1,
+   "problems": [],
+   "found_by": "event",
+   "model_calls": 1,
+   "event_time": "2026-11-18T04:49:07Z",
+   "event_id": "bdd5a240-3c0c-bf57-a08c-ab48c3c4fa7a",
+   "written_at": 1794977357.0
+  }
+ },
+ "daily": {
+  "column": "unit",
+  "no_event_reached_the_function": true,
+  "draft": {
+   "table": "l19_prices_raw",
+   "column": "unit",
+   "type": "string",
+   "status": "draft",
+   "description": "The string column unit records the unit of measure for a price entry, with observed values including each, kg, 100 g, and L.",
+   "sample_values_used": [
+    "each",
+    "kg",
+    "100 g",
+    "L"
+   ],
+   "attempts": 1,
+   "problems": [],
+   "found_by": "daily check",
+   "model_calls": 1,
+   "event_time": null,
+   "event_id": null,
+   "pending_key": "pending/l19_prices_raw.unit.json"
+  },
+  "drafts": 1,
+  "model_calls": 1
+ },
+ "catalog_comments_written": 0,
+ "model_calls": 2,
+ "budget": 4
+}

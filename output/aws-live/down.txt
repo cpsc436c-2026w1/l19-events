@@ -1,2 +1,2 @@
-deleted: table l19-prices, table l19-windows, queue l19-failures, function l19-window, role recipe-l19-events-lambda, log group /aws/lambda/l19-window
+deleted: log group /aws/lambda/l19-window
 remaining: none

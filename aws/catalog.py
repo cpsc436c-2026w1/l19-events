@@ -355,5 +355,10 @@ def down(c: dict, region: str, sleep=time.sleep) -> dict:
             left.pop(f"role {ROLE}", None)
         if not left:
             break
+        if all(k.startswith("log group") for k in left):             # Lambda wrote its last lines after the delete
+            try:
+                c["logs"].delete_log_group(logGroupName=f"/aws/lambda/{FUNCTION}")
+            except ClientError:
+                pass
         sleep(5)
     return {"deleted": [k for k, v in found.items() if v is not None], "remaining": sorted(left)}
