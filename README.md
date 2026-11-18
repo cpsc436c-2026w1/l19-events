@@ -9,6 +9,7 @@ needed, except for the section "On AWS" below. Only the commands marked live cal
 | Event examples: normal and planted cases, the same files on every run | `make_events.py`, `events/` (see `events/README.md`) | `uv run python make_events.py` |
 | Code or agent, for every case | `TRIAGE.md` | read it |
 | Job stories, requirements and the scenarios that test them | `STORIES.md`, `features/`, `check_traceability.py` | `uv run behave`, `uv run python check_traceability.py` |
+| Studio: a constraint (RF) as a tagged scenario, with and without the dedupe | `STUDIO.md`, `features/js01_constraints.feature` | `uv run behave --tags=@RF010` |
 | Data structures checked at the boundary | `inputs.py` | `uv run python inputs.py` |
 | Lambda code on the change stream: windows, duplicates, late updates | `stream_window.py` | see `RUN.md` |
 | Many simultaneous queries while updates stream in | `load.py` | `uv run python load.py` |
