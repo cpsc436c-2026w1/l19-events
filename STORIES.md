@@ -67,6 +67,7 @@ is the one I pay.
 | R010 | WHEN a shopper asks for a product's latest price THE SYSTEM SHALL answer | p99 under 50 ms with 50 shoppers, on the local store | `store-burst` | code |
 | R020 | WHILE price updates arrive THE SYSTEM SHALL return a price that was the latest at most 5 minutes ago | largest staleness at most 300 s | `store-burst` | code |
 | R030 | IF the handler falls behind the stream THEN THE SYSTEM SHALL report that answers are older than the window | reported when the handler needs 4 s for an update | `store-burst` | code |
+| R040 | IF two updates for one product arrive at once or out of order THEN THE SYSTEM SHALL keep the one with the newer observed time | exactly one winner per pair; the final item is the newest | `late-update` | code |
 
 ## What the mapping shows
 

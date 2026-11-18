@@ -4,3 +4,4 @@ __pycache__/
 /pending/
 output/eval-stub/
 .env
+build/

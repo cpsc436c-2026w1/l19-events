@@ -1,0 +1,61 @@
+"""The Lambda function: stream_window.handler with its numbers written to a DynamoDB table.
+
+The function's code is stream_window.py, unchanged. This file gives it a sink that writes to the window table
+(local runs keep the numbers in memory) and reads one setting:
+
+    L19_VALIDATE   "1": check every record against the input model, reject what does not fit (inputs.py)
+                   "0": do not check; a record without a price raises and the invocation fails. `up` sets "0",
+                        because the failing-batch run shows what Lambda does with a function that fails.
+
+Rows in the window table (partition key pk, sort key sk):
+    window#<store>      <window start>   count, avg_price, burst      written when the window ends
+    correction#<store>  <eventID>        window_start, price          a late update, for an earlier window
+    rejected#<store>    <eventID>        currency, reason
+"""
+from __future__ import annotations
+
+import os
+import statistics
+from decimal import Decimal
+
+import boto3
+
+import stream_window
+
+TABLE = boto3.resource("dynamodb").Table(os.environ["WINDOW_TABLE"])
+VALIDATE = os.environ.get("L19_VALIDATE", "0") == "1"
+
+
+class _Windows:
+    def append(self, w) -> None:
+        TABLE.put_item(Item={"pk": f"window#{w.store}", "sk": w.window_start, "window_end": w.window_end,
+                             "count": w.count, "avg_price": Decimal(str(w.avg_price)), "burst": w.burst})
+
+
+class _Keyed:
+    """Written by eventID: a retried invocation writes the same row again, not a second one."""
+
+    def __init__(self, kind: str):
+        self.kind = kind
+
+    def __setitem__(self, event_id: str, row) -> None:
+        item = {k: (Decimal(str(v)) if isinstance(v, float) else v) for k, v in row.model_dump().items()}
+        TABLE.put_item(Item={"pk": f"{self.kind}#{row.store}", "sk": event_id, **item})
+
+
+class DynamoSink:
+    def __init__(self):
+        self.windows, self.corrections, self.rejected = _Windows(), _Keyed("correction"), _Keyed("rejected")
+
+    def median_count(self, store: str) -> float | None:
+        rows = TABLE.query(KeyConditionExpression="pk = :p", ExpressionAttributeValues={":p": f"window#{store}"},
+                           ProjectionExpression="#c", ExpressionAttributeNames={"#c": "count"})["Items"]
+        counts = [int(r["count"]) for r in rows]
+        return statistics.median(counts) if len(counts) >= stream_window.MIN_HISTORY else None
+
+
+stream_window.SINK = DynamoSink()
+
+
+def handler(event, context):
+    return stream_window.handler(event, context, validate=VALIDATE)

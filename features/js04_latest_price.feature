@@ -24,3 +24,10 @@ Feature: The latest price while prices change
     When 50 simulated shoppers ask for latest prices during that time
     Then the largest staleness is more than 300 seconds
     And the report says the handler is behind
+
+  @R040
+  Scenario: Of two updates for one product, the store keeps the newer one (simulated)
+    Given an in-memory price store
+    When an update observed at 09:20:05 and then an update observed at 09:20:01 are written for one product
+    Then the first write wins and the second is refused
+    And the stored price is the one observed at 09:20:05

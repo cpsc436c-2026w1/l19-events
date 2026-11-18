@@ -55,7 +55,7 @@ Feature: Price updates of my store
       | an unknown store | store |
 
   @R080
-  Scenario: One bad record does not stop the other records of its batch
+  Scenario: One bad record does not stop the other records of its batch (simulated)
     Given the simulator plants a batch of 8 updates whose sixth lacks a price
     And the window function does not check its input
     When Lambda delivers the batch, splits it on an error and sends a failed record aside

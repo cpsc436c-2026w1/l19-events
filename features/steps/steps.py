@@ -506,3 +506,112 @@ def step_report_ok(context):
 @then("the report says the handler is behind")
 def step_report_behind(context):
     assert "the handler is behind" in context.load_report.line()
+
+
+# ---- JS04 R040 offline, and the @live scenarios (AWS) -------------------------------------------------------
+
+import uuid  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
+
+from inputs import PriceUpdate  # noqa: E402
+
+
+@given("an in-memory price store")
+def step_store(context):
+    context.store = load.LatestPrices()
+
+
+@when("an update observed at {first} and then an update observed at {second} are written for one product")
+def step_two_writes(context, first, second):
+    def update(hhmmss, price):
+        return PriceUpdate(event_id="e", event_name="MODIFY", sequence_number="1" * 21, created_at=0, product_code="p",
+                           store="north", price=price, currency="CAD", update_id=hhmmss,
+                           observed_at=datetime.fromisoformat(f"{DAY}T{hhmmss}+00:00"))
+
+    async def go():
+        return [await context.store.put_if_newer(update(first, 2.0)), await context.store.put_if_newer(update(second, 1.0)),
+                await context.store.get_latest("p", "north")]
+    *context.wins, context.item = asyncio.run(go())
+    context.first = first
+
+
+@then("the first write wins and the second is refused")
+def step_wins(context):
+    assert context.wins == [True, False]
+
+
+@then("the stored price is the one observed at {hhmmss}")
+def step_stored(context, hhmmss):
+    assert context.item["update_id"] == hhmmss and context.item["price"] == 2.0
+
+
+@given("the l19 resources are up in my AWS account")
+def step_live_up(context):
+    from aws import deploy
+    context.deploy, context.aws = deploy, deploy.clients_for()
+    account = context.aws["sts"].get_caller_identity()["Account"]
+    found = deploy.existing(context.aws, account)
+    missing = [k for k, v in found.items() if v is None and not k.startswith("log group")]
+    assert not missing, f"run `uv run python -m aws.deploy up` first; missing: {missing}"
+    context.run_id = uuid.uuid4().hex[:6]
+
+
+@when("two clients race {rounds:d} rounds of conditional writes on one item")
+def step_live_race(context, rounds):
+    from aws import clients
+    context.race = clients.run_race(lambda: context.deploy.client("dynamodb"), context.deploy.PRICES, context.run_id,
+                                    rounds=rounds)
+
+
+@then("every round has exactly one winner")
+def step_live_one_winner(context):
+    r = context.race
+    assert r["rounds_with_exactly_one_winner"] == r["rounds"] and not r["other_errors"], r
+
+
+@then("the final item holds the newest observed time")
+def step_live_final(context):
+    assert context.race["final_item"]["observed_at"] == context.race["expected_observed_at"]
+
+
+@when("{users:d} clients read latest prices for {seconds:d} seconds while updates are written")
+def step_live_load(context, users, seconds):
+    from aws import clients
+    ddb = context.deploy.client("dynamodb", max_pool_connections=max(64, users + 14))
+    context.live_load = clients.run_load(ddb, context.deploy.PRICES, context.run_id, users=users, seconds=seconds)
+
+
+@then("the p99 latency of the reads is under {ms:d} ms")
+def step_live_p99(context, ms):
+    assert context.live_load["p99_ms"] < ms, context.live_load
+
+
+@then("the largest staleness is under {s:d} seconds")
+def step_live_stale(context, s):
+    assert context.live_load["max_staleness_ms"] < s * 1000, context.live_load
+
+
+@when("{good:d} good updates and one without a price are written to the price table")
+def step_live_batch(context, good):
+    from aws import clients
+    context.queue_url = context.aws["sqs"].get_queue_url(QueueName=context.deploy.QUEUE)["QueueUrl"]
+    clients.read_failures(context.aws["sqs"], context.queue_url, wait_s=1)
+    context.written = clients.write_batch(context.aws["dynamodb"], context.deploy.PRICES, context.run_id, good=good)
+
+
+@when("the 5-minute window has ended")
+def step_live_wait(context):
+    from aws import clients
+    context.batch = clients.wait_for_batch(context.aws["dynamodb"], context.aws["sqs"], context.deploy.WINDOWS,
+                                           context.queue_url, context.written)
+
+
+@then("{n:d} updates are counted in the window table, each once")
+def step_live_counted(context, n):
+    assert context.batch["observed"] and context.batch["counted"] == n, context.batch
+
+
+@then("the on-failure queue holds {n:d} record for a batch of {size:d}")
+def step_live_queue(context, n, size):
+    f = context.batch["failures"]
+    assert len(f) == n and f[0]["DDBStreamBatchInfo"]["batchSize"] == size, f

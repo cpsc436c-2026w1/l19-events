@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-OTHER_TAGS = {"eval", "limits"}       # the only tags allowed beside @JSnn and @Rnn0
+OTHER_TAGS = {"eval", "limits", "live"}   # the only tags allowed beside @JSnn and @Rnn0
 
 
 def stories(text: str) -> dict[str, list[str]]:
