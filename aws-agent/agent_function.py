@@ -9,7 +9,7 @@ S3 lake, and writes the result for a person. Nothing here changes a file, the jo
 Strands in Lambda (strandsagents.com, user guide, "Deploy to AWS Lambda", read 2026-11-17): the handler is a
 normal `handler(event, context)`; dependencies are installed for the function's platform (`--platform
 manylinux2014_aarch64 --only-binary=:all:`); the Lambda example does not stream its response. The official Strands
-layer carries strands-agents 1.40.0 without the OpenAI provider, so this function ships its own dependencies
+layer carries the base strands-agents package at 1.40.0 (layer version 2), so this function ships its own dependencies
 (strands-agents[openai] 1.64.0, the version the hooks were written for).
 
 S3 invokes the function asynchronously (S3 user guide, "Event notification types and destinations"; Lambda
@@ -18,7 +18,8 @@ prices_raw/ and the suffix .csv, and the function writes only under results/, so
 again. `agent-up` sets the asynchronous retries to 0: a failed run is not repeated, so the model calls stay bounded.
 
 Limits, in code: 12 model calls and 10 tool calls in a Strands hook (half_file_agent.CallCap), and a deadline of
-240 s, below the function's timeout of 300 s, so the function ends the agent and still writes its result.
+240 s. The deadline is checked before each model call and one call may take 300 s, so the function's timeout is
+600 s: the function ends the agent and still writes its result.
 
 Environment: BUCKET; COURSE_MCP_TOKEN (the course token, set at deploy and never logged); GATEWAY_URL and
 L19_MODEL (optional); L19_AGENT_MODEL=stub runs the stub model, without a network call.
@@ -65,7 +66,8 @@ def handler(event, context, s3=None, model=None):
         body = {**result.model_dump(), "arrived_at": arrived, "seconds": round(time.monotonic() - started, 1),
                 "tools_called": [t["tool"] for t in trace if "tool" in t],
                 "model_calls_log": next((t["model_calls"] for t in trace if "model_calls" in t), []),
-                "request_id": getattr(context, "aws_request_id", "")}
+                "request_id": getattr(context, "aws_request_id", ""),
+                "event_key": record["s3"]["object"]["key"], "event_version": record.get("eventVersion")}
         s3.put_object(Bucket=bucket, Key=f"results/day={day}/{result.store}.json",
                       Body=json.dumps(body, indent=1).encode(), ContentType="application/json")
         print(f"L19 agent {result.store}: code {result.code_verdict}, decided by {result.decided_by}, cause "

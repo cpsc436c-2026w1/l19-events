@@ -74,7 +74,20 @@ def test_runaway_model_is_stopped_below_the_function_timeout(c, monkeypatch):
     monkeypatch.setenv("BUCKET", b)
     (out,) = agent_function.handler(_event("centre"), None, s3=c["s3"], model=half_file_agent.stub_model("stub-runaway"))
     assert (out["model_calls"], out["tool_calls"]) == (12, 10) and out["stopped"] and out["fix"] == "escalate"
-    assert agent_function.DEADLINE_S < agent.TIMEOUT_S
+    assert agent_function.DEADLINE_S + 300 < agent.TIMEOUT_S        # the deadline plus one model call's timeout
+
+
+def test_every_agent_tool_runs_on_the_s3_lake(c):
+    b = _bucket(c)
+    lake, key = S3Lake(c["s3"], b), "prices_raw/day=2026-10-31/centre-export.csv"
+    lake.get_object(key)
+    tools = {t.tool_name: t for t in half_file_agent.make_tools(lake, key, "centre")}
+    listing = tools["list_files"]()["Contents"]
+    assert len(listing) == 8 and listing[-1] == {"Key": key, "Size": 27854, "LastModified": "2026-10-31T01:41:10Z"}
+    assert tools["file_overview"](day="2026-10-31")["products"] == 205
+    assert sum(tools["products_per_category"](day="2026-10-31")["products_per_category"].values()) == 205
+    assert sum(tools["usual_per_category"]()["median_products_per_category"].values()) == 411
+    assert len(tools["export_log"]()["lines"]) == 3
 
 
 def test_s3_lake_has_the_interface_of_the_local_lake(c):
@@ -117,14 +130,27 @@ def test_up_run_down_on_moto(c, tmp_path):
     found = agent.existing(c, out["account"], REGION)
     assert agent.not_ours(found) == [] and sum(v is not None for v in found.values()) >= 3
     cfg = c["lambda"].get_function_configuration(FunctionName=agent.FUNCTION)
-    assert cfg["Timeout"] == 300 and cfg["Environment"]["Variables"]["BUCKET"] == out["bucket"]
+    assert cfg["Timeout"] == 600 and cfg["Environment"]["Variables"]["BUCKET"] == out["bucket"]
     assert c["lambda"].get_function_event_invoke_config(FunctionName=agent.FUNCTION)["MaximumRetryAttempts"] == 0
     note = c["s3"].get_bucket_notification_configuration(Bucket=out["bucket"])["LambdaFunctionConfigurations"][0]
     assert note["Id"] == "new-raw-file"
     # the run: uploads, then (here) results written by hand, as the function would
     ticks = iter(range(0, 10000, 5))
     r = agent.run(c, REGION, deadline_s=20, sleep=lambda s: None, clock=lambda: next(ticks))
-    assert r["results"] == {} and any("NO RESULT" in line for line in agent.run_lines(r, {}))
+    # no function runs on moto: the control file gets no result, so the planted files are not uploaded
+    assert r["results"] == {} and "not uploaded" in r["stopped"] and any("STOPPED" in x for x in agent.run_lines(r, {}))
+    keys = [o["Key"] for o in c["s3"].list_objects_v2(Bucket=out["bucket"])["Contents"]]
+    assert "prices_raw/day=2026-10-31/online-export.csv" in keys and "prices_raw/day=2026-10-31/centre-export.csv" not in keys
+    # with the control's result there (as the function writes it), the planted files go up
+    c["s3"].put_object(Bucket=out["bucket"], Key="results/day=2026-10-31/online.json", Body=json.dumps(
+        {"code_verdict": "pass", "decided_by": "code", "model_calls": 0, "event_key": "k"}).encode())
+    real_delete = c["s3"].delete_object
+    c["s3"].delete_object = lambda **kw: None if kw["Key"].endswith("online.json") else real_delete(**kw)
+    ticks = iter(range(0, 100000, 5))
+    r = agent.run(c, REGION, deadline_s=20, sleep=lambda s: None, clock=lambda: next(ticks))
+    c["s3"].delete_object = real_delete
+    assert r["control"]["model_calls"] == 0 and r["results"] == {}
+    assert any("NO RESULT" in line for line in agent.run_lines(r, {}))
     keys = [o["Key"] for o in c["s3"].list_objects_v2(Bucket=out["bucket"])["Contents"]]
     assert "prices_raw/day=2026-10-31/centre-export.csv" in keys and "export-logs/day=2026-10-31/north.log" in keys
     head = c["s3"].head_object(Bucket=out["bucket"], Key="prices_raw/day=2026-10-31/centre-export.csv")

@@ -7,7 +7,7 @@
 What `agent-up` creates, tagged project=l19-events:
     l19-agent-<account>-<region>   S3 bucket: the raw prefix, the reference files, the results, the function's zip
     recipe-l19-events-agent        IAM role of the function (not created when LAMBDA_ROLE_ARN is set)
-    l19-agent                      Lambda function (aws-agent/agent_function.py), arm64, timeout 300 s
+    l19-agent                      Lambda function (aws-agent/agent_function.py), timeout 600 s
     the bucket's notification      s3:ObjectCreated:* under prices_raw/ ending in .csv -> the function
 
 The course token: `agent-up` reads COURSE_MCP_TOKEN from your environment and sets it as an environment variable
@@ -16,10 +16,12 @@ the account can read it, so delete the function when you are done (`agent-down`)
 in Secrets Manager.
 
 Documentation read 2026-11-17: strandsagents.com user guide "Deploy to AWS Lambda" (packaging for the function's
-platform, handler signature); S3 user guide "Event notification types and destinations" and "Configuring event
-notifications using object key name filtering" (prefix and suffix rules); Lambda API reference AddPermission
-(principal s3.amazonaws.com with SourceArn and SourceAccount) and PutFunctionEventInvokeConfig
-(MaximumRetryAttempts for asynchronous invocations, 0 to 2).
+platform, handler signature); Lambda developer guide "Process Amazon S3 event notifications with Lambda" (S3
+invokes the function asynchronously; S3 needs permission in the function's resource-based policy; a function that
+writes to the bucket that starts it can loop, so "configure the trigger to only apply to a prefix used for
+incoming objects"). Not read, taken from the boto3 service models and marked assumed: the prefix and suffix
+filter rules, AddPermission with SourceArn and SourceAccount, and MaximumRetryAttempts 0 to 2 for asynchronous
+invocations (default 2).
 """
 from __future__ import annotations
 
@@ -42,7 +44,8 @@ ENTRY = ["aws-agent/agent_function.py", "aws-agent/s3_lake.py"]
 DAY = "2026-10-31"
 CASES = {"half-file": ("centre", "partial_file"), "category-missing": ("north", "category_missing")}
 MODEL_CALL_BUDGET = 30            # for one agent-run: 2 files, at most 12 model calls each, no retries
-TIMEOUT_S = 300
+TIMEOUT_S = 600                   # above the agent's deadline (240 s) plus one model call's timeout (300 s)
+CONTROL = ("normal-day", "online")  # a file code settles: proves the trigger and the result path with 0 model calls
 
 
 def bucket_name(account: str, region: str) -> str:
@@ -226,13 +229,38 @@ def up(c: dict, region: str, arch: str, token: str, vendored: Path | None = None
             "role_arn": role_arn, "model": model, "timeout_s": TIMEOUT_S, "ping": ping}
 
 
-def run(c: dict, region: str, deadline_s: int = 420, poll_s: int = 10, sleep=time.sleep, clock=time.time) -> dict:
-    """Upload the two planted files (each starts the function), then wait for the two results."""
+def _result(s3, b: str, store: str) -> dict | None:
+    try:
+        return json.loads(s3.get_object(Bucket=b, Key=f"results/day={DAY}/{store}.json")["Body"].read())
+    except ClientError as e:
+        if not _gone(e) and e.response["Error"]["Code"] != "NoSuchKey":
+            raise
+        return None
+
+
+def run(c: dict, region: str, deadline_s: int = 660, poll_s: int = 10, sleep=time.sleep, clock=time.time,
+        control_deadline_s: int = 120) -> dict:
+    """First a file that code settles: its result must arrive with 0 model calls, which proves the trigger, the
+    key and the write of the result. Only then the two planted files (each starts the function); wait for both."""
     account = c["sts"].get_caller_identity()["Account"]
     b, s3 = bucket_name(account, region), c["s3"]
-    for case, (store, _) in CASES.items():                          # yesterday's answers are not today's
+    for store in [s for s, _ in CASES.values()] + [CONTROL[1]]:     # yesterday's answers are not today's
         s3.delete_object(Bucket=b, Key=f"results/day={DAY}/{store}.json")
     started = clock()
+    case, store = CONTROL
+    facts = next(x for x in json.loads((ROOT / "events" / "manifest.json").read_text())["cases"] if x["id"] == case)
+    s3.put_object(Bucket=b, Key=f"prices_raw/day={DAY}/{store}-export.csv",
+                  Body=(ROOT / "events" / "batch-files" / case / "prices_raw" / f"day={DAY}" / f"{store}-export.csv").read_bytes(),
+                  Metadata={"simulated-arrival": facts["facts"]["per_store"][store]["arrived_at"]})
+    control = None
+    while control is None and clock() - started < control_deadline_s:
+        control = _result(s3, b, store)
+        if control is None:
+            sleep(5)
+    if control is None or control["model_calls"] != 0 or control["decided_by"] != "code":
+        return {"waited_s": round(clock() - started), "control": control, "results": {}, "model_calls": 0,
+                "budget": MODEL_CALL_BUDGET, "stopped": "the control file did not come back settled by code; "
+                                                        "the planted files were not uploaded"}
     for case in CASES:
         objects = case_objects(case)
         for key in sorted(objects):                                  # export-logs/ before prices_raw/: the log is there first
@@ -241,16 +269,11 @@ def run(c: dict, region: str, deadline_s: int = 420, poll_s: int = 10, sleep=tim
     results: dict[str, dict] = {}
     while len(results) < len(CASES) and clock() - started < deadline_s:
         for case, (store, _) in CASES.items():
-            if case not in results:
-                try:
-                    body = s3.get_object(Bucket=b, Key=f"results/day={DAY}/{store}.json")["Body"].read()
-                    results[case] = json.loads(body)
-                except ClientError as e:
-                    if not _gone(e) and e.response["Error"]["Code"] != "NoSuchKey":
-                        raise
+            if case not in results and (got := _result(s3, b, store)) is not None:
+                results[case] = got
         if len(results) < len(CASES):
             sleep(poll_s)
-    return {"waited_s": round(clock() - started), "results": results,
+    return {"waited_s": round(clock() - started), "control": control, "results": results,
             "model_calls": sum(r["model_calls"] for r in results.values()), "budget": MODEL_CALL_BUDGET}
 
 
@@ -263,6 +286,8 @@ def durations(logs, since_epoch: float) -> dict[str, float]:
     except ClientError:
         return out
     for e in events:
+        if "RequestId:" not in e["message"] or "Duration:" not in e["message"]:
+            continue
         parts = e["message"].split("\t")
         rid = parts[0].split("RequestId:")[1].strip()
         out[rid] = float(next(p for p in parts if p.startswith("Duration:")).split()[1]) / 1000
@@ -270,7 +295,12 @@ def durations(logs, since_epoch: float) -> dict[str, float]:
 
 
 def run_lines(r: dict, lambda_s: dict[str, float]) -> list[str]:
-    lines = []
+    lines, ctl = [], r.get("control")
+    lines.append(f"control ({CONTROL[0]}, {CONTROL[1]}): " + (
+        f"code {ctl['code_verdict']}, decided by {ctl['decided_by']}, {ctl['model_calls']} model calls; "
+        f"S3 sent the key as {ctl.get('event_key')}" if ctl else "NO RESULT"))
+    if r.get("stopped"):
+        return lines + [f"STOPPED: {r['stopped']}"]
     for case, (store, planted) in CASES.items():
         x = r["results"].get(case)
         if not x:

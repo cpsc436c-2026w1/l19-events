@@ -633,7 +633,7 @@ def step_agent_run(context):
     context.agent_run = context.agent.run(context.aws, context.region)
 
 
-@then("a result is written for each file within 7 minutes")
+@then("a result is written for each file within 11 minutes")
 def step_agent_results(context):
     assert set(context.agent_run["results"]) == set(context.agent.CASES), context.agent_run
 

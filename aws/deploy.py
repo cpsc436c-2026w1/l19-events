@@ -381,8 +381,14 @@ def main(argv: list[str] | None = None) -> None:
         elif a.command == "agent-run":
             started = time.time()
             r = agent.run(c, region())
-            time.sleep(8)                                            # the REPORT lines reach the log a moment later
-            emit("agent-run", agent.run_lines(r, agent.durations(c["logs"], started - 5)), account, r)
+            took: dict = {}
+            wanted = {x.get("request_id") for x in r["results"].values()}
+            for _ in range(12):                                      # the REPORT lines reach the log a little later
+                took = agent.durations(c["logs"], started - 5)
+                if wanted <= set(took):
+                    break
+                time.sleep(5)
+            emit("agent-run", agent.run_lines(r, took), account, {**r, "lambda_duration_s": took})
             sys.exit(0 if len(r["results"]) == len(agent.CASES) else 1)
         else:
             out = agent.down(c, region())
