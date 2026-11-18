@@ -5,7 +5,7 @@ Feature: Price updates of my store
   I know the new prices are in before customers see them.
 
   Background:
-    Given the simulator delivers one hour of price updates to the window function
+    Given the simulator delivers one hour of price updates to the counting function
 
   @R010
   Scenario: One count and one average for each store and window
@@ -44,9 +44,9 @@ Feature: Price updates of my store
   @R070
   Scenario Outline: An update that does not fit the input model is rejected with the field named
     Given the simulator plants an update with <fault>
-    When the window function receives it
+    When the counting function receives it
     Then the update is in the rejected list and the reason names the field "<field>"
-    And the window function does not fail
+    And the counting function does not fail
 
     Examples:
       | fault            | field |
@@ -57,7 +57,7 @@ Feature: Price updates of my store
   @R080
   Scenario: One bad record does not stop the other records of its batch (simulated)
     Given the simulator plants a batch of 8 updates whose sixth lacks a price
-    And the window function does not check its input
+    And the counting function does not check its input
     When Lambda delivers the batch, splits it on an error and sends a failed record aside
     Then 7 updates are applied once
     And 1 record is in the failure list, with its sequence number and without its content
@@ -77,6 +77,6 @@ Feature: Price updates of my store
 
   @R090
   Scenario: A replay shows what a function without the duplicate check counted twice
-    Given the window function does not skip an update it has seen
+    Given the counting function does not skip an update it has seen
     When the window numbers are rebuilt from the start of the stream
     Then the replayed numbers differ from the stored numbers in window 09:25 only

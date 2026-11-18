@@ -23,7 +23,7 @@ FIRST = f"{DAY}T09:00:00Z"
 # ---- JS01: price updates ------------------------------------------------------------------------------------
 
 
-@given("the simulator delivers one hour of price updates to the window function")
+@given("the simulator delivers one hour of price updates to the counting function")
 def step_stream(context):
     folder = EVENTS / "price-updates"
     context.records = [json.loads(line) for line in (folder / "records.jsonl").read_text().splitlines()]
@@ -393,7 +393,7 @@ def step_invalid(context, fault):
     context.bad = json.loads(lines[FAULTS[fault]])
 
 
-@when("the window function receives it")
+@when("the counting function receives it")
 def step_receive(context):
     stream_window.SINK = context.sink = stream_window.Sink()
     event = json.loads((EVENTS / "price-updates" / "window-event.json").read_text())
@@ -409,7 +409,7 @@ def step_rejected_field(context, field):
     assert r.event_id == context.bad["eventID"] and r.reason.startswith(f"{field}: "), r
 
 
-@then("the window function does not fail")
+@then("the counting function does not fail")
 def step_no_raise(context):
     assert context.raised is None and context.out["batchItemFailures"] == []
 
@@ -421,7 +421,7 @@ def step_failing_batch(context):
     context.validate = True
 
 
-@given("the window function does not check its input")
+@given("the counting function does not check its input")
 def step_unvalidated(context):
     context.validate = False
 
@@ -452,7 +452,7 @@ def step_twice(context, n):
     assert context.report.counted_twice == n
 
 
-@given("the window function does not skip an update it has seen")
+@given("the counting function does not skip an update it has seen")
 def step_no_dedupe(context):
     context.dedupe = False
 
