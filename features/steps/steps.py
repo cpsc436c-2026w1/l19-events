@@ -77,6 +77,15 @@ def step_window_count(context, hhmm, n, store):
     assert _cell(context, hhmm, store)["count"] == n, _cell(context, hhmm, store)
 
 
+@then("window {hhmm} has the simulator's truth count for every store")
+def step_window_truth(context, hhmm):
+    start = f"{DAY}T{hhmm}:00Z"
+    correct = next(w["correct"] for w in context.truth["windows"] if w["start"] == start)
+    wrong = [f"store {store}: expected {want['count']} updates (the simulator's truth), counted {context.final[start][store]['count']}"
+             for store, want in correct.items() if context.final[start][store]["count"] != want["count"]]
+    assert not wrong, f"window {hhmm}, " + "; ".join(wrong)
+
+
 @then("every window has the count and the average of the simulator's truth")
 def step_truth(context):
     for w in context.truth["windows"]:

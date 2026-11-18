@@ -3,7 +3,7 @@
 2026-11-17. Form as in `plans/2026-11-17-l19-stories-to-scenarios.md`:
 a job story becomes one feature, each requirement (one EARS line, R010, R020 ...) becomes at least one tagged
 scenario, and the planted case goes into the scenario's `Given`. The features are in `features/`;
-`check_traceability.py` fails when a story lacks a feature, a requirement lacks a scenario, or a tag does not name a story or a requirement. Case names are those of `events/manifest.json`.
+`check_traceability.py` fails when a story lacks a feature, a requirement or a constraint lacks a scenario, or a tag does not name a story, a requirement, a constraint or a request (section "Constraints and requests"). Case names are those of `events/manifest.json`.
 The numbers are targets chosen for this demo; the 5 % and 8 % ranges are L18's (`triage/world.py`).
 
 ## JS01 Store manager: price updates of my store
@@ -68,6 +68,19 @@ is the one I pay.
 | R020 | WHILE price updates arrive THE SYSTEM SHALL return a price that was the latest at most 5 minutes ago | largest staleness at most 300 s | `store-burst` | code |
 | R030 | IF the handler falls behind the stream THEN THE SYSTEM SHALL report that answers are older than the window | reported when the handler needs 4 s for an update | `store-burst` | code |
 | R040 | IF two updates for one product arrive at once or out of order THEN THE SYSTEM SHALL keep the one with the newer observed time | exactly one winner per pair; the final item is the newest | `late-update` | code |
+
+## Constraints and requests
+
+The feedback on a proposal names constraints (RF010, RF020 ...), each a property of the running system that a test
+can pass or fail, and requests (RQ010 ...), each something written and shown, not run. They hold for the whole
+system, so they are listed here and not under a story. `check_traceability.py` reads this section: every RF needs
+at least one scenario tagged with its code, an RQ needs none and is listed, and a tag not in this table fails.
+The scenarios are in `features/js01_constraints.feature`.
+
+| Code | Constraint or request | Tested by |
+|---|---|---|
+| RF010 | Every price update must be counted exactly once, even when the stream delivers it twice. | `redelivered-update` |
+| RQ010 | The design names who reads the list of rejected updates and how often. | read, not run |
 
 ## What the mapping shows
 
