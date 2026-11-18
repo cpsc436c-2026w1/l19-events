@@ -7,6 +7,7 @@
     uv run python -m aws.deploy down          # delete everything `up` made, and check that none of it remains
     uv run python -m aws.deploy logs          # one line per invocation of the function, last 20 minutes
     uv run python -m aws.deploy update-code   # upload the function again after a change to its files
+    uv run python -m aws.deploy agent-up | agent-run | agent-down    # the agent for a held file: aws/agent.py
 
 What `up` creates, every one tagged project=l19-events:
     l19-prices                 DynamoDB table (product_code, store), on demand, with a change stream
@@ -356,7 +357,8 @@ def emit(name: str, lines: list[str], account: str, data: dict | None = None) ->
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["up", "update-code", "logs", "run-race", "run-batch", "run-load", "down"])
+    ap.add_argument("command", choices=["up", "update-code", "logs", "run-race", "run-batch", "run-load", "down",
+                                        "agent-up", "agent-run", "agent-down"])
     ap.add_argument("--consistent", action="store_true", help="run-load: strongly consistent reads")
     ap.add_argument("--users", type=int, default=50)
     ap.add_argument("--seconds", type=float, default=30.0)
@@ -364,6 +366,30 @@ def main(argv: list[str] | None = None) -> None:
     c = clients_for()
     account = c["sts"].get_caller_identity()["Account"]
     run_id = uuid.uuid4().hex[:6]
+    if a.command.startswith("agent-"):
+        from aws import agent
+        c["s3"] = client("s3")
+        if a.command == "agent-up":
+            token = next((os.environ[k].strip() for k in ("KB_MCP_TOKEN", "LLM_API_KEY", "COURSE_MCP_TOKEN")
+                          if os.environ.get(k, "").strip()), "")
+            out = agent.up(c, region(), architecture(), token)
+            emit("agent-up", [f"bucket {out['bucket']}, function {agent.FUNCTION} ({out['architecture']}, zip "
+                              f"{out['zip_bytes']} bytes, timeout {out['timeout_s']} s), model {out['model']}",
+                              f"direct call: {out['ping']}",
+                              "trigger: s3:ObjectCreated:* under prices_raw/ ending in .csv; asynchronous retries 0"],
+                 account, out)
+        elif a.command == "agent-run":
+            started = time.time()
+            r = agent.run(c, region())
+            time.sleep(8)                                            # the REPORT lines reach the log a moment later
+            emit("agent-run", agent.run_lines(r, agent.durations(c["logs"], started - 5)), account, r)
+            sys.exit(0 if len(r["results"]) == len(agent.CASES) else 1)
+        else:
+            out = agent.down(c, region())
+            emit("agent-down", [f"deleted: {', '.join(out['deleted']) or 'nothing was there'}",
+                                f"remaining: {', '.join(out['remaining']) or 'none'}"], account, out)
+            sys.exit(1 if out["remaining"] else 0)
+        return
     if a.command == "update-code":                                   # after a change to the function's files
         c["lambda"].update_function_code(FunctionName=FUNCTION,
                                          ZipFile=function_zip(vendor_pydantic(architecture())))

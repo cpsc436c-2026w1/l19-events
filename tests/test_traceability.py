@@ -16,7 +16,7 @@ def _feat(tags, *scenarios):
 def test_the_repository_is_traceable():
     problems, covered = T.check((ROOT / "STORIES.md").read_text(), T.features(ROOT / "features"))
     assert problems == []
-    assert {s: sum(r.values()) for s, r in covered.items()} == {"JS01": 14, "JS02": 18, "JS03": 11, "JS04": 7}
+    assert {s: sum(r.values()) for s, r in covered.items()} == {"JS01": 14, "JS02": 19, "JS03": 11, "JS04": 7}
 
 
 def test_a_story_without_a_feature_fails():

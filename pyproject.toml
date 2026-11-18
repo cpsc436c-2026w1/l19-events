@@ -13,7 +13,7 @@ dependencies = [
 dev = [
     "behave>=1.3.3",
     "inspect-ai>=0.3.291",
-    "moto[awslambda,dynamodb,iam,logs,sqs,sts]>=5.2.5",
+    "moto[awslambda,dynamodb,iam,logs,s3,sqs,sts]>=5.2.5",
     "pytest>=8",
 ]
 
@@ -21,6 +21,6 @@ dev = [
 package = false
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [".", "aws-agent"]
 testpaths = ["tests"]
 addopts = "-q"

@@ -615,3 +615,35 @@ def step_live_counted(context, n):
 def step_live_queue(context, n, size):
     f = context.batch["failures"]
     assert len(f) == n and f[0]["DDBStreamBatchInfo"]["batchSize"] == size, f
+
+
+@given("the l19 agent resources are up in my AWS account")
+def step_agent_up(context):
+    from aws import agent, deploy
+    context.agent, context.region = agent, deploy.region()
+    context.aws = {**deploy.clients_for(), "s3": deploy.client("s3")}
+    account = context.aws["sts"].get_caller_identity()["Account"]
+    found = agent.existing(context.aws, account, context.region)
+    missing = [k for k, v in found.items() if v is None and not k.startswith("log group")]
+    assert not missing, f"run `uv run python -m aws.deploy agent-up` first; missing: {missing}"
+
+
+@when("the two planted files are uploaded to the raw prefix")
+def step_agent_run(context):
+    context.agent_run = context.agent.run(context.aws, context.region)
+
+
+@then("a result is written for each file within 7 minutes")
+def step_agent_results(context):
+    assert set(context.agent_run["results"]) == set(context.agent.CASES), context.agent_run
+
+
+@then('every named cause is either confirmed by code or the fix is "escalate"')
+def step_agent_checked(context):
+    for r in context.agent_run["results"].values():
+        assert r["verified"] or r["fix"] == "escalate", r
+
+
+@then("the agent made at most {n:d} model calls in all")
+def step_agent_budget(context, n):
+    assert context.agent_run["model_calls"] <= n, context.agent_run
