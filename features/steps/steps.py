@@ -81,7 +81,8 @@ def step_window_count(context, hhmm, n, store):
 def step_window_truth(context, hhmm):
     start = f"{DAY}T{hhmm}:00Z"
     correct = next(w["correct"] for w in context.truth["windows"] if w["start"] == start)
-    wrong = [f"store {store}: expected {want['count']} updates (the simulator's truth), counted {context.final[start][store]['count']}"
+    wrong = [f"store {store}: expected count {want['count']} (the simulator's truth), "
+             f"actual count {context.final[start][store]['count']}"
              for store, want in correct.items() if context.final[start][store]["count"] != want["count"]]
     assert not wrong, f"window {hhmm}, " + "; ".join(wrong)
 

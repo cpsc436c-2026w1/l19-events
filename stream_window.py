@@ -13,10 +13,12 @@ Rules, all in code (TRIAGE.md):
     quiet-windows        `final_numbers` reports a window without stored numbers as a count of 0
 
     uv run python stream_window.py
+    L19_DEDUPE=off uv run behave --tags=@RF010   # the studio's switch: this run does not skip a record it has seen
 """
 from __future__ import annotations
 
 import json
+import os
 import statistics
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -62,9 +64,19 @@ def window_start(ts: str) -> str:
     return _iso(t - timedelta(seconds=(t.minute * 60 + t.second) % WINDOW_S))
 
 
-def handler(event: dict, context=None, validate: bool = True, dedupe: bool = True) -> dict:
+def dedupe_switch() -> bool:
+    """L19_DEDUPE=off turns the eventID dedupe off for one run (the studio's prediction); unset or on keeps it."""
+    value = os.environ.get("L19_DEDUPE", "on")
+    if value not in ("on", "off"):
+        raise ValueError(f"L19_DEDUPE must be on or off, not {value!r}")
+    return value == "on"
+
+
+def handler(event: dict, context=None, validate: bool = True, dedupe: bool | None = None) -> dict:
     """validate=False and dedupe=False exist for two demos: a function that does not check its input raises on a
-    bad record (failing_batch.py), and one that does not skip a record it has seen counts it twice (replay.py)."""
+    bad record (failing_batch.py), and one that does not skip a record it has seen counts it twice (replay.py).
+    Without a dedupe argument the handler follows the switch L19_DEDUPE (on unless set to off)."""
+    dedupe = dedupe_switch() if dedupe is None else dedupe
     state = event.get("state") or {}
     seen, stores = set(state.get("seen", [])), {k: dict(v) for k, v in state.get("stores", {}).items()}
     start, end = event["window"]["start"], event["window"]["end"]
