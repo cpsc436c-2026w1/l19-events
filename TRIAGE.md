@@ -31,6 +31,10 @@ The lens column says how often the reaction runs: every request, every row or ru
 | `invalid-update` | Reject the update with a reason that names the field (`price`, `store`); count the other updates. | code | The input model says what an update is; a record that does not fit fails at the boundary, before any arithmetic. | every row or run | `inputs.py`, `stream_window.py` |
 | `failing-batch` | Lambda splits the failed batch in two until the bad record is alone, sends its sequence number to the on-failure destination, and the other 7 are applied once. | code | Settings of the event source mapping (`BisectBatchOnFunctionError`, `MaximumRetryAttempts`, an on-failure destination); the window's state and the duplicate check keep the count right. With the input check the batch does not fail at all. | every row or run | `failing_batch.py` (Lambda's part simulated locally) |
 
+On AWS the window's state and its last call are per shard of the stream (`output/aws-live/`, 4 shards): the
+function stores one count per store, window and shard, a reader adds them, and the burst flag as built compares
+per-shard counts. The local runs have one shard.
+
 ## Batch files (S3 event for a new export in `prices_raw/day=2026-10-31/`)
 
 The handler runs when a file arrives, before the nightly job `curate-prices`. It computes five values from the file

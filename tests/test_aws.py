@@ -71,7 +71,7 @@ def test_up_creates_tagged_resources_and_down_leaves_none(aws, tmp_path):
     found = deploy.existing(aws, out["account"])
     made = {k: v for k, v in found.items() if v is not None}
     assert set(made) >= {"table l19-prices", "table l19-windows", "queue l19-failures", "function l19-window",
-                         "role recipe-l19-events-lambda"}
+                         "role recipe-l19-events-lambda", "event source mapping of l19-window"}
     assert deploy.not_ours(found) == []
     policy = aws["iam"].get_role_policy(RoleName=deploy.ROLE, PolicyName="least-privilege")["PolicyDocument"]
     assert len(policy["Statement"]) == 4

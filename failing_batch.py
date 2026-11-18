@@ -45,7 +45,7 @@ class BisectReport(BaseModel):
 
     def line(self) -> str:
         seq = self.failures[0]["DDBStreamBatchInfo"]["startSequenceNumber"] if self.failures else ""
-        return (f"invocations (batch size:outcome)  {' '.join(self.invocations)}\n"
+        return (f"simulated invocations (batch size:outcome)  {' '.join(self.invocations)}\n"
                 f"applied once: {self.applied}   sent aside: {len(self.failures)} (sequence number ...{seq[-6:]})   "
                 f"counted twice after a second delivery: {self.counted_twice}")
 
@@ -89,6 +89,6 @@ def run(validate: bool = False) -> BisectReport:
 if __name__ == "__main__":
     print(run().line())
     checked = run(validate=True)
-    print(f"with the input check:             {' '.join(checked.invocations)}\n"
+    print(f"simulated, with the input check:             {' '.join(checked.invocations)}\n"
           f"applied once: {checked.applied}   rejected at the boundary: {len(stream_window.SINK.rejected)} "
           f"({next(iter(stream_window.SINK.rejected.values())).reason})   sent aside: 0")

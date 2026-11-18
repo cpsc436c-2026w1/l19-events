@@ -5,6 +5,8 @@
     uv run python -m aws.deploy run-batch     # a failing record in a batch; waits for the 5-minute window to end
     uv run python -m aws.deploy run-load      # 50 clients read while updates are written (--consistent)
     uv run python -m aws.deploy down          # delete everything `up` made, and check that none of it remains
+    uv run python -m aws.deploy logs          # one line per invocation of the function, last 20 minutes
+    uv run python -m aws.deploy update-code   # upload the function again after a change to its files
 
 What `up` creates, every one tagged project=l19-events:
     l19-prices                 DynamoDB table (product_code, store), on demand, with a change stream
@@ -159,6 +161,15 @@ def existing(c: dict, account: str) -> dict[str, dict | None]:
         if not _missing(e):
             raise
         out[f"role {ROLE}"] = None
+    try:                                                             # a mapping can outlive its function
+        ms = c["lambda"].list_event_source_mappings()["EventSourceMappings"]
+        ours = [m["UUID"] for m in ms if m.get("FunctionArn", "").endswith(f":function:{FUNCTION}")
+                and m.get("State") != "Deleting"]
+        out[f"event source mapping of {FUNCTION}"] = {"project": TAG["project"], "uuids": ours} if ours else None
+    except ClientError as e:
+        if not _missing(e):
+            raise
+        out[f"event source mapping of {FUNCTION}"] = None
     try:
         groups = c["logs"].describe_log_groups(logGroupNamePrefix=f"/aws/lambda/{FUNCTION}")["logGroups"]
         out[f"log group /aws/lambda/{FUNCTION}"] = {} if any(
@@ -287,9 +298,9 @@ def down(c: dict | None = None, sleep=time.sleep) -> dict:
     if foreign:
         raise SystemExit(f"not tagged project=l19-events, so not deleted: {foreign}")
     lam, ddb = c["lambda"], c["dynamodb"]
+    for uid in (found[f"event source mapping of {FUNCTION}"] or {}).get("uuids", []):
+        lam.delete_event_source_mapping(UUID=uid)
     if found[f"function {FUNCTION}"] is not None:
-        for m in lam.list_event_source_mappings(FunctionName=FUNCTION)["EventSourceMappings"]:
-            lam.delete_event_source_mapping(UUID=m["UUID"])
         lam.delete_function(FunctionName=FUNCTION)
     if found[f"log group /aws/lambda/{FUNCTION}"] is not None:
         c["logs"].delete_log_group(logGroupName=f"/aws/lambda/{FUNCTION}")

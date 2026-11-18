@@ -32,20 +32,22 @@ All commands, with what you should see: [`RUN.md`](RUN.md).
 Three cases also run on real services, in your own sandbox: two writers at once on a DynamoDB table, a failing
 record on the table's stream with a Lambda function and an on-failure queue, and 50 clients reading while updates
 are written. One script creates everything, runs a case and deletes everything: `uv run python -m aws.deploy`
-(steps in [`RUN.md`](RUN.md), a saved run in `output/aws-live/`). A run costs well under 0.10 USD.
+(steps in [`RUN.md`](RUN.md), a saved run in `output/aws-live/`). The saved run made about 14,000 read units, 700
+write units and 60 short function invocations: an estimate of under 0.01 USD (unit prices assumed, not looked up).
 
 ### AWS permissions
 
 What your credentials need for `aws/deploy.py`. Every resource is named `l19-*` (the role `recipe-l19-events-lambda`)
-and tagged `project=l19-events`; `down` deletes only names that carry the tag.
+and tagged `project=l19-events` (the event source mapping and Lambda's log group carry no tag); `down` deletes only
+these names, and only when they carry the tag.
 
 | Service | Actions | On |
 |---|---|---|
 | DynamoDB | `CreateTable`, `DescribeTable`, `DeleteTable`, `TagResource`, `ListTagsOfResource`, `PutItem`, `GetItem`, `Query` | tables `l19-prices`, `l19-windows` |
 | SQS | `CreateQueue`, `GetQueueUrl`, `GetQueueAttributes`, `ListQueueTags`, `TagQueue`, `ReceiveMessage`, `DeleteMessage`, `DeleteQueue` | queue `l19-failures` |
-| Lambda | `CreateFunction`, `GetFunction`, `InvokeFunction`, `DeleteFunction`, `TagResource`, `CreateEventSourceMapping`, `ListEventSourceMappings`, `DeleteEventSourceMapping` | function `l19-window` and its mapping |
+| Lambda | `CreateFunction`, `GetFunction`, `ListTags`, `UpdateFunctionCode`, `InvokeFunction`, `DeleteFunction`, `TagResource`, `CreateEventSourceMapping`, `ListEventSourceMappings`, `DeleteEventSourceMapping` | function `l19-window` and its mapping |
 | IAM | `CreateRole`, `GetRole`, `TagRole`, `ListRoleTags`, `PutRolePolicy`, `ListRolePolicies`, `DeleteRolePolicy`, `DeleteRole`, `PassRole` (to Lambda) | role `recipe-l19-events-lambda` |
-| CloudWatch Logs | `DescribeLogGroups`, `DeleteLogGroup` | `/aws/lambda/l19-window` |
+| CloudWatch Logs | `DescribeLogGroups`, `FilterLogEvents`, `DeleteLogGroup` | `/aws/lambda/l19-window` |
 | STS | `GetCallerIdentity` | |
 
 If you may not create roles, set `LAMBDA_ROLE_ARN` to a role you have; then only `iam:PassRole` on it is needed.

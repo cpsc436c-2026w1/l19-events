@@ -64,7 +64,7 @@ Feature: Price updates of my store
     And delivering the batch again counts 0 updates twice
 
   @R080
-  Scenario: With the input check the same batch does not fail
+  Scenario: With the input check the same batch does not fail (simulated)
     Given the simulator plants a batch of 8 updates whose sixth lacks a price
     When Lambda delivers the batch, splits it on an error and sends a failed record aside
     Then 7 updates are applied once

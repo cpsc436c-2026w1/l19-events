@@ -63,15 +63,17 @@ need. The offline demos above say "simulated" where they play Lambda's part; the
 
 In a student lease:
 
-- Lambda runs at most 10 function instances at once in the whole account. This function uses one (one shard of
-  the stream, one batch at a time), and the script does not reserve concurrency.
+- Lambda runs at most 10 function instances at once in the whole account. This function uses one per shard of
+  the stream (4 shards in the saved run), and the script does not reserve concurrency.
 - If the lease does not let you create roles, set `LAMBDA_ROLE_ARN` to the lease's Lambda role before `up`.
 - `up` builds the function's zip with `uv pip install --target build/lambda` for Linux and this machine's
   processor type; `L19_ARCH=x86_64` or `arm64` overrides it.
 - Run `down` before the lease ends. A second `up` keeps what is there.
 
 The same three as scenarios: `uv run behave --tags=live` (after `up`; it waits for one window).
-`uv run python -m aws.deploy logs` prints one line per invocation of the function (shard, records, state in and out).
+`uv run python -m aws.deploy logs` prints one line per invocation of the function (shard, records, state in and out);
+`uv run python -m aws.deploy update-code` uploads the function again after you change its files. The live scenarios
+were written with the run and have not been run through behave yet.
 
 A saved run from 2026-11-17 (instructor sandbox, ca-central-1, client on an EC2 instance in the same Region) is in
 `output/aws-live/`:
@@ -82,6 +84,10 @@ A saved run from 2026-11-17 (instructor sandbox, ca-central-1, client on an EC2 
 | Failing batch | 20 of 20 good updates counted once; the record without a price reached the queue alone (`batchSize` 1) after 2 invocations |
 | Many queries, eventually consistent | 50 clients, 9,290 reads in 30 s: p50 6.5 ms, p99 42.5 ms; 0 stale answers |
 | Many queries, strongly consistent | 50 clients, 9,107 reads in 30 s: p50 7.5 ms, p99 95.4 ms; 0 stale answers |
+
+The 0 stale answers show little: the writer made about 114 writes to about 120 products, so most products were
+written once, and a stale answer could only be a read that missed a new item. A run that rewrites the same few
+products would test staleness.
 
 What the failing-batch run showed that the local simulation does not: the new table's stream had 4 shards, and
 Lambda keeps the window's state for each shard and makes the window's last call once per shard. The first version

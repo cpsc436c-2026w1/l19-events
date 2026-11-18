@@ -14,7 +14,7 @@ know the new prices are in before customers see them.
 
 | Requirement | EARS line | Target | Tested by | Code or agent |
 |---|---|---|---|---|
-| R010 | WHEN a 5-minute window ends THE SYSTEM SHALL store one count and one average price for each store | within 60 s of the window's end | `normal-update` | code |
+| R010 | WHEN a 5-minute window ends THE SYSTEM SHALL store one count and one average price for each store (on AWS: one per shard of the stream, added by the reader) | within 60 s of the window's end | `normal-update` | code |
 | R020 | IF an update is delivered more than once THEN THE SYSTEM SHALL count it once | the count equals the `correct` count in `truth.json` | `redelivered-update` | code |
 | R030 | IF an update was observed in an earlier window THEN THE SYSTEM SHALL add it to that window | updates up to 10 minutes late | `late-update` | code |
 | R040 | IF an update's currency is not CAD THEN THE SYSTEM SHALL keep it out of the average and list it as rejected | 0 such updates in any average | `eur-update` | code |
