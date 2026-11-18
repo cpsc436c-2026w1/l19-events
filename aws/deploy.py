@@ -8,6 +8,7 @@
     uv run python -m aws.deploy logs          # one line per invocation of the function, last 20 minutes
     uv run python -m aws.deploy update-code   # upload the function again after a change to its files
     uv run python -m aws.deploy agent-up | agent-run | agent-down    # the agent for a held file: aws/agent.py
+    uv run python -m aws.deploy catalog-up | catalog-run | catalog-down    # a catalog change: aws/catalog.py
 
 What `up` creates, every one tagged project=l19-events:
     l19-prices                 DynamoDB table (product_code, store), on demand, with a change stream
@@ -358,7 +359,8 @@ def emit(name: str, lines: list[str], account: str, data: dict | None = None) ->
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["up", "update-code", "logs", "run-race", "run-batch", "run-load", "down",
-                                        "agent-up", "agent-run", "agent-down"])
+                                        "agent-up", "agent-run", "agent-down",
+                                        "catalog-up", "catalog-run", "catalog-down"])
     ap.add_argument("--consistent", action="store_true", help="run-load: strongly consistent reads")
     ap.add_argument("--users", type=int, default=50)
     ap.add_argument("--seconds", type=float, default=30.0)
@@ -366,6 +368,27 @@ def main(argv: list[str] | None = None) -> None:
     c = clients_for()
     account = c["sts"].get_caller_identity()["Account"]
     run_id = uuid.uuid4().hex[:6]
+    if a.command.startswith("catalog-"):
+        from aws import catalog
+        c.update(s3=client("s3"), glue=client("glue"), events=client("events"))
+        if a.command == "catalog-up":
+            token = next((os.environ[k].strip() for k in ("KB_MCP_TOKEN", "LLM_API_KEY", "COURSE_MCP_TOKEN")
+                          if os.environ.get(k, "").strip()), "")
+            out = catalog.up(c, region(), architecture(), token)
+            emit("catalog-up", [f"Glue table {out['database']}.{out['table']}, bucket {out['bucket']}, function "
+                                f"{catalog.FUNCTION} (zip {out['zip_bytes']} bytes), model {out['model']}",
+                                f"direct call: {out['ping']}",
+                                f"rules: {catalog.RULE} (Glue table changes), {catalog.DAILY_RULE} (once a day)"], account, out)
+        elif a.command == "catalog-run":
+            r = catalog.run(c, region())
+            emit("catalog-run", catalog.run_lines(r), account, r)
+            sys.exit(0 if not r.get("stopped") and r["daily"]["draft"] else 1)
+        else:
+            out = catalog.down(c, region())
+            emit("catalog-down", [f"deleted: {', '.join(out['deleted']) or 'nothing was there'}",
+                                  f"remaining: {', '.join(out['remaining']) or 'none'}"], account, out)
+            sys.exit(1 if out["remaining"] else 0)
+        return
     if a.command.startswith("agent-"):
         from aws import agent
         c["s3"] = client("s3")

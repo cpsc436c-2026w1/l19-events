@@ -197,7 +197,8 @@ def up(c: dict, region: str, arch: str, token: str, vendored: Path | None = None
     code = function_zip(vendored if vendored is not None else vendor(arch))
     s3.put_object(Bucket=b, Key="code/agent.zip", Body=code)        # over 50 MB unzipped: uploaded through S3
     env = {"BUCKET": b, "L19_AGENT_MODEL": model, **({"COURSE_MCP_TOKEN": token} if token else {}),
-           **({"GATEWAY_URL": os.environ["GATEWAY_URL"]} if os.environ.get("GATEWAY_URL") else {})}
+           **({"GATEWAY_URL": os.environ["GATEWAY_URL"]} if os.environ.get("GATEWAY_URL") else {}),
+           **({"L19_MAX_MODEL_CALLS": os.environ["L19_MAX_MODEL_CALLS"]} if os.environ.get("L19_MAX_MODEL_CALLS") else {})}
     for attempt in range(6):
         try:
             lam.create_function(FunctionName=FUNCTION, Runtime="python3.12", Role=role_arn, Architectures=[arch],

@@ -60,11 +60,12 @@ def validate(reply: dict, column_type: str, samples: list) -> list[str]:
     return problems
 
 
-def draft(table: str, column: str, column_type: str, samples: list, chat: Callable[[str, str], str]) -> Draft:
+def draft(table: str, column: str, column_type: str, samples: list, chat: Callable[[str, str], str],
+          max_retries: int | None = None) -> Draft:
     task = (f"Table: {table}\nColumn: {column}\nType: {column_type}\n"
             f"Sample values ({len(samples)}): {json.dumps(samples)}")
     user, reply, problems = task, {}, ["no reply"]
-    for attempt in range(1, MAX_RETRIES + 2):
+    for attempt in range(1, (MAX_RETRIES if max_retries is None else max_retries) + 2):
         reply = parse_json(chat(SYSTEM, user))                       # the one model call of this round
         problems = validate(reply, column_type, samples)             # the evaluator: a check in code
         if not problems:
@@ -95,13 +96,26 @@ def handler(event: dict, context=None) -> list[dict]:
     """Lambda entry point for the Glue catalog event: watch the table in code, then draft a description for each
     new column that lacks one."""
     catalog_watch.CATALOG = CATALOG
+    return _draft_all(catalog_watch.handler(event))
+
+
+def daily_handler(event: dict, context=None) -> list[dict]:
+    """Lambda entry point for the daily check: Glue's events are best effort, so once a day code compares every
+    table with its stored definition and drafts for any new column an event did not announce.
+    event: {"max_retries": n} is optional."""
+    catalog_watch.CATALOG = CATALOG
+    return _draft_all(catalog_watch.daily_handler(event), event.get("max_retries"))
+
+
+def _draft_all(results: list[dict], max_retries: int | None = None) -> list[dict]:
     out = []
-    for result in catalog_watch.handler(event):
+    for result in results:
         if "draft_description" not in result["actions"]:
             continue
         cols = {c["Name"]: c for c in CATALOG.get_table("", result["table"])["Table"]["StorageDescriptor"]["Columns"]}
         for column in result["lacking_description"]:
-            d = draft(result["table"], column, cols[column]["Type"], CATALOG.samples(result["table"], column), CHAT)
+            d = draft(result["table"], column, cols[column]["Type"], CATALOG.samples(result["table"], column), CHAT,
+                      max_retries)
             out.append({**d.model_dump(), "pending_file": str(write_pending(d))})
     return out
 

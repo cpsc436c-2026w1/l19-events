@@ -22,7 +22,8 @@ Limits, in code: 12 model calls and 10 tool calls in a Strands hook (half_file_a
 600 s: the function ends the agent and still writes its result.
 
 Environment: BUCKET; COURSE_MCP_TOKEN (the course token, set at deploy and never logged); GATEWAY_URL and
-L19_MODEL (optional); L19_AGENT_MODEL=stub runs the stub model, without a network call.
+L19_MODEL (optional); L19_AGENT_MODEL=stub runs the stub model, without a network call; L19_MAX_MODEL_CALLS
+lowers the cap on model calls for one file (set at `agent-up` from your environment).
 """
 from __future__ import annotations
 
@@ -61,7 +62,8 @@ def handler(event, context, s3=None, model=None):
         arrived = lake.arrived_at(key, record["eventTime"][:19] + "Z")
         m, trace = model or build_model(), []
         result = half_file_agent.triage(key, arrived, lake, m, caps=(
-            half_file_agent.MAX_MODEL_CALLS, half_file_agent.MAX_TOOL_CALLS, DEADLINE_S), trace=trace)
+            int(os.environ.get("L19_MAX_MODEL_CALLS") or half_file_agent.MAX_MODEL_CALLS),
+            half_file_agent.MAX_TOOL_CALLS, DEADLINE_S), trace=trace)
         day = key.split("day=")[1].split("/")[0]
         body = {**result.model_dump(), "arrived_at": arrived, "seconds": round(time.monotonic() - started, 1),
                 "tools_called": [t["tool"] for t in trace if "tool" in t],
