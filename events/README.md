@@ -80,8 +80,8 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 - The Glue documentation shows one example event (`BatchCreatePartition`). That `UpdateTable` events leave out
   `changedPartitions`, and the form of `resources` for a table (`table/<database>/<table>`) and for a database
   (`database/<database>`), are assumed.
-- The S3 documentation says the key is URL encoded and shows a space becoming `+`. That `day=2026-10-31` reads
-  `day%3D2026-10-31`, and the length and content of `sequencer`, are assumed.
+- The S3 documentation says the key is URL encoded and shows a space becoming `+`. A real S3 event on 2026-11-17
+  carried `day%3D2026-10-31` (`../output/aws-live/agent-run.txt`). The length and content of `sequencer` are assumed.
 - Whether Lambda invokes a function for a window without records was not checked; the quiet windows only show that
   no record carries those 10 minutes.
 - Account `123456789012`, Region `us-west-2`, bucket `lake`, the table name `latest_price` and the stream ARN are

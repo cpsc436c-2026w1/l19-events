@@ -1,0 +1,2 @@
+deleted: bucket l19-agent-123456789012-ca-central-1, function l19-agent, role recipe-l19-events-agent, log group /aws/lambda/l19-agent
+remaining: none

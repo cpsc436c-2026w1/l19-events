@@ -1,0 +1,136 @@
+{
+ "waited_s": 46,
+ "control": {
+  "key": "prices_raw/day=2026-10-31/online-export.csv",
+  "store": "online",
+  "code_verdict": "pass",
+  "decided_by": "code",
+  "cause": "no_fault",
+  "verified": true,
+  "fix": "none",
+  "evidence": [],
+  "model_calls": 0,
+  "tool_calls": 0,
+  "stopped": "",
+  "arrived_at": "2026-10-31T01:42:10Z",
+  "seconds": 0.1,
+  "tools_called": [],
+  "model_calls_log": [],
+  "request_id": "29b4fb17-a7cb-4c66-a202-e2061309658c",
+  "event_key": "prices_raw/day%3D2026-10-31/online-export.csv",
+  "event_version": "2.6"
+ },
+ "results": {
+  "category-missing": {
+   "key": "prices_raw/day=2026-10-31/north-export.csv",
+   "store": "north",
+   "code_verdict": "unsettled",
+   "decided_by": "agent",
+   "cause": "category_missing",
+   "verified": true,
+   "fix": "ask_upstream",
+   "evidence": [
+    "Held file has 0 products in category 'noodles' while the 7-day median is 24",
+    "All other 25 categories match the 7-day medians exactly (e.g. quiche 24, soup 22, gnocchi 17, ravioli 6)",
+    "File has 387 products = 411 median products minus the 24 missing noodles products",
+    "Log shows the export itself only produced 463 rows ('query returned 463 rows for 387 products') and upload size 52808 bytes matches the file, so the file is not truncated",
+    "File LastModified 2026-10-31T01:40:10Z, before the 02:00:04 nightly job, so not late"
+   ],
+   "model_calls": 2,
+   "tool_calls": 5,
+   "stopped": "",
+   "arrived_at": "2026-10-31T01:40:10Z",
+   "seconds": 16.6,
+   "tools_called": [
+    "file_overview",
+    "products_per_category",
+    "list_files",
+    "export_log",
+    "usual_per_category"
+   ],
+   "model_calls_log": [
+    {
+     "max_tokens_sent": 16384,
+     "model": "qwen3.8-27b",
+     "stop_reason": "tool_use",
+     "output_tokens": 223
+    },
+    {
+     "max_tokens_sent": 16384,
+     "model": "qwen3.8-27b",
+     "stop_reason": "end_turn",
+     "output_tokens": 1019
+    }
+   ],
+   "request_id": "5a015207-d764-43f5-9965-266bf9d8b708",
+   "event_key": "prices_raw/day%3D2026-10-31/north-export.csv",
+   "event_version": "2.6"
+  },
+  "half-file": {
+   "key": "prices_raw/day=2026-10-31/centre-export.csv",
+   "store": "centre",
+   "code_verdict": "unsettled",
+   "decided_by": "agent",
+   "cause": "partial_file",
+   "verified": true,
+   "fix": "ask_upstream",
+   "evidence": [
+    "export log: 'query returned 493 rows for 411 products' but file has only 242 rows / 205 products",
+    "held file last product code 3302740057670 vs usual end 8801073113893 (10-29 and 10-30 files)",
+    "file size 27854 bytes vs ~55-58k bytes on each of the 7 previous days",
+    "all 26 categories present but with reduced counts (e.g. breaded fish 3 vs median 16, quiche 15 vs 24), so no whole category missing"
+   ],
+   "model_calls": 4,
+   "tool_calls": 8,
+   "stopped": "",
+   "arrived_at": "2026-10-31T01:41:10Z",
+   "seconds": 32.8,
+   "tools_called": [
+    "file_overview",
+    "list_files",
+    "export_log",
+    "products_per_category",
+    "products_per_category",
+    "file_overview",
+    "usual_per_category",
+    "file_overview"
+   ],
+   "model_calls_log": [
+    {
+     "max_tokens_sent": 16384,
+     "model": "qwen3.8-27b",
+     "stop_reason": "tool_use",
+     "output_tokens": 115
+    },
+    {
+     "max_tokens_sent": 16384,
+     "model": "qwen3.8-27b",
+     "stop_reason": "tool_use",
+     "output_tokens": 326
+    },
+    {
+     "max_tokens_sent": 16384,
+     "model": "qwen3.8-27b",
+     "stop_reason": "tool_use",
+     "output_tokens": 1607
+    },
+    {
+     "max_tokens_sent": 16384,
+     "model": "qwen3.8-27b",
+     "stop_reason": "end_turn",
+     "output_tokens": 358
+    }
+   ],
+   "request_id": "bb34e466-ceb4-46c3-9cef-da5316ac9cd4",
+   "event_key": "prices_raw/day%3D2026-10-31/centre-export.csv",
+   "event_version": "2.6"
+  }
+ },
+ "model_calls": 6,
+ "budget": 30,
+ "lambda_duration_s": {
+  "29b4fb17-a7cb-4c66-a202-e2061309658c": 0.21849000000000002,
+  "5a015207-d764-43f5-9965-266bf9d8b708": 16.704720000000002,
+  "bb34e466-ceb4-46c3-9cef-da5316ac9cd4": 33.24767
+ }
+}

@@ -1,0 +1,3 @@
+bucket l19-agent-123456789012-ca-central-1, function l19-agent (arm64, zip 32447840 bytes, timeout 600 s), model gateway
+direct call: {'ok': True, 'strands': 'installed', 'token_set': True}
+trigger: s3:ObjectCreated:* under prices_raw/ ending in .csv; asynchronous retries 0

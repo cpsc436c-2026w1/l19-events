@@ -61,6 +61,35 @@ need. The offline demos above say "simulated" where they play Lambda's part; the
    uv run python -m aws.deploy down
    ```
 
+### The agent as a Lambda function
+
+A new file under `prices_raw/` in an S3 bucket starts a function. The function runs the runbook in code; for a
+file code cannot settle it runs the Strands agent, checks the cause in code, and writes
+`results/day=<day>/<store>.json` for a person. These commands call the course LLM gateway: at most 24 model
+calls for one `agent-run`.
+
+```
+export COURSE_MCP_TOKEN=...                   # your course token; agent-up puts it in the function's environment
+uv run python -m aws.deploy agent-up          # bucket, reference files, role, function, S3 trigger
+uv run python -m aws.deploy agent-run         # a control file first (0 model calls), then the two planted files
+uv run python -m aws.deploy agent-down        # delete all of it; the token goes with the function
+```
+
+A saved run from 2026-11-17 (`output/aws-live/agent-run.txt`, model `qwen3.8-27b`, 6 model calls in all):
+
+| File | Code | Agent named | Code confirmed | Model calls | Tool calls | Lambda duration |
+|---|---|---|---|---|---|---|
+| control, store online | pass | not started | | 0 | 0 | under 1 s |
+| half-size file, store centre | unsettled | `partial_file` | yes | 4 | 8 | 33.2 s |
+| file without one category, store north | unsettled | `category_missing` | yes | 2 | 5 | 16.7 s |
+
+One run of each case: it shows the path works on AWS, not how often the agent is right.
+`agent-run` uploads the control file again every 30 s until its result is there: in our first try a file uploaded
+a few seconds after the trigger was configured started nothing, and the same upload minutes later did.
+
+Run the three one after another: the token stays readable in the function's configuration until `agent-down`.
+`uv run behave --tags=live` includes a scenario for this case, and that scenario spends model calls.
+
 In a student lease:
 
 - Lambda runs at most 10 function instances at once in the whole account. This function uses one per shard of

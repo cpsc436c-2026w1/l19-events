@@ -1,0 +1,4 @@
+control (normal-day, online): code pass, decided by code, 0 model calls; S3 sent the key as prices_raw/day%3D2026-10-31/online-export.csv
+half-file (centre): code unsettled; agent named partial_file (planted partial_file), verified True, fix ask_upstream; 4 model calls, 8 tool calls, 32.8 s in the handler, Lambda duration 33.2 s
+category-missing (north): code unsettled; agent named category_missing (planted category_missing), verified True, fix ask_upstream; 2 model calls, 5 tool calls, 16.6 s in the handler, Lambda duration 16.7 s
+model calls: 6 of at most 30

@@ -224,7 +224,16 @@ def up(c: dict, region: str, arch: str, token: str, vendored: Path | None = None
                            Principal="s3.amazonaws.com", SourceArn=f"arn:aws:s3:::{b}", SourceAccount=account)
     except lam.exceptions.ResourceConflictException:
         pass
-    s3.put_bucket_notification_configuration(Bucket=b, NotificationConfiguration=notification(function_arn))
+    for attempt in range(8):
+        try:
+            s3.put_bucket_notification_configuration(Bucket=b, NotificationConfiguration=notification(function_arn))
+            break
+        except ClientError as e:
+            # S3 checks that it may invoke the function; the permission added a moment ago is not always visible yet
+            # (seen 2026-11-17: "Unable to validate the following destination configurations")
+            if e.response["Error"]["Code"] != "InvalidArgument" or attempt == 7:
+                raise
+            sleep(5)
     return {"account": account, "region": region, "bucket": b, "architecture": arch, "zip_bytes": len(code),
             "role_arn": role_arn, "model": model, "timeout_s": TIMEOUT_S, "ping": ping}
 
@@ -239,7 +248,7 @@ def _result(s3, b: str, store: str) -> dict | None:
 
 
 def run(c: dict, region: str, deadline_s: int = 660, poll_s: int = 10, sleep=time.sleep, clock=time.time,
-        control_deadline_s: int = 120) -> dict:
+        control_deadline_s: int = 360) -> dict:
     """First a file that code settles: its result must arrive with 0 model calls, which proves the trigger, the
     key and the write of the result. Only then the two planted files (each starts the function); wait for both."""
     account = c["sts"].get_caller_identity()["Account"]
@@ -249,13 +258,18 @@ def run(c: dict, region: str, deadline_s: int = 660, poll_s: int = 10, sleep=tim
     started = clock()
     case, store = CONTROL
     facts = next(x for x in json.loads((ROOT / "events" / "manifest.json").read_text())["cases"] if x["id"] == case)
-    s3.put_object(Bucket=b, Key=f"prices_raw/day={DAY}/{store}-export.csv",
-                  Body=(ROOT / "events" / "batch-files" / case / "prices_raw" / f"day={DAY}" / f"{store}-export.csv").read_bytes(),
-                  Metadata={"simulated-arrival": facts["facts"]["per_store"][store]["arrived_at"]})
-    control = None
+    body = (ROOT / "events" / "batch-files" / case / "prices_raw" / f"day={DAY}" / f"{store}-export.csv").read_bytes()
+    control, uploads = None, 0
     while control is None and clock() - started < control_deadline_s:
-        control = _result(s3, b, store)
-        if control is None:
+        # Seen 2026-11-17: a file uploaded a few seconds after the notification was configured started nothing; the
+        # same upload minutes later did. So the control file is uploaded again every 30 s until its result is there.
+        s3.put_object(Bucket=b, Key=f"prices_raw/day={DAY}/{store}-export.csv", Body=body,
+                      Metadata={"simulated-arrival": facts["facts"]["per_store"][store]["arrived_at"]})
+        uploads += 1
+        for _ in range(6):
+            control = _result(s3, b, store)
+            if control is not None:
+                break
             sleep(5)
     if control is None or control["model_calls"] != 0 or control["decided_by"] != "code":
         return {"waited_s": round(clock() - started), "control": control, "results": {}, "model_calls": 0,

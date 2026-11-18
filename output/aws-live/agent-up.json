@@ -1,0 +1,15 @@
+{
+ "account": "123456789012",
+ "region": "ca-central-1",
+ "bucket": "l19-agent-123456789012-ca-central-1",
+ "architecture": "arm64",
+ "zip_bytes": 32447840,
+ "role_arn": "arn:aws:iam::123456789012:role/recipe-l19-events-agent",
+ "model": "gateway",
+ "timeout_s": 600,
+ "ping": {
+  "ok": true,
+  "strands": "installed",
+  "token_set": true
+ }
+}

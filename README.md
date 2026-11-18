@@ -31,7 +31,8 @@ All commands, with what you should see: [`RUN.md`](RUN.md).
 
 Three cases also run on real services, in your own sandbox: two writers at once on a DynamoDB table, a failing
 record on the table's stream with a Lambda function and an on-failure queue, and 50 clients reading while updates
-are written. One script creates everything, runs a case and deletes everything: `uv run python -m aws.deploy`
+are written. A fourth runs the agent for a held file as a Lambda function that S3 starts when a file lands in
+the raw prefix. One script creates everything, runs a case and deletes everything: `uv run python -m aws.deploy`
 (steps in [`RUN.md`](RUN.md), a saved run in `output/aws-live/`). The saved run made about 14,000 read units, 700
 write units and 60 short function invocations: an estimate of under 0.01 USD (unit prices assumed, not looked up).
 
@@ -49,6 +50,18 @@ these names, and only when they carry the tag.
 | IAM | `CreateRole`, `GetRole`, `TagRole`, `ListRoleTags`, `PutRolePolicy`, `ListRolePolicies`, `DeleteRolePolicy`, `DeleteRole`, `PassRole` (to Lambda) | role `recipe-l19-events-lambda` |
 | CloudWatch Logs | `DescribeLogGroups`, `FilterLogEvents`, `DeleteLogGroup` | `/aws/lambda/l19-window` |
 | STS | `GetCallerIdentity` | |
+
+The agent's commands (`agent-up`, `agent-run`, `agent-down`) need, in addition:
+
+| Service | Actions | On |
+|---|---|---|
+| S3 | `CreateBucket`, `PutBucketTagging`, `GetBucketTagging`, `PutBucketPublicAccessBlock`, `PutBucketNotification`, `ListBucket`, `PutObject`, `GetObject`, `DeleteObject`, `DeleteBucket` | bucket `l19-agent-<account>-<region>` |
+| Lambda | the actions above, and `AddPermission`, `PutFunctionEventInvokeConfig` | function `l19-agent` |
+| IAM | the actions above | role `recipe-l19-events-agent` |
+| CloudWatch Logs | the actions above | `/aws/lambda/l19-agent` |
+
+The agent function's role may read `prices_raw/*`, `export-logs/*` and `reference/*` in that bucket
+(`s3:GetObject`), write `results/*` (`s3:PutObject`) and write its own logs.
 
 If you may not create roles, set `LAMBDA_ROLE_ARN` to a role you have; then only `iam:PassRole` on it is needed.
 That role must allow what the function does, and nothing more is needed:
