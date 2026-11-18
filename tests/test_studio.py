@@ -55,10 +55,24 @@ def test_the_rf010_scenario_passes_with_dedupe_and_fails_without_it():
     assert on.returncode == 0, on.stdout
     off = _behave("@RF010", "off")
     assert off.returncode != 0
-    assert "window 09:25, store centre: expected count 1 (the simulator's truth), actual count 2" in off.stdout
-    assert "store online: expected count 4 (the simulator's truth), actual count 7" in off.stdout
+    assert "updates counted for store centre between 09:25 and 09:30: expected 1, actual 2" in off.stdout
+    assert "updates counted for store online between 09:25 and 09:30: expected 4, actual 7" in off.stdout
+    assert "window" not in off.stdout.split("ASSERT FAILED")[1].splitlines()[0]
 
 
-def test_the_rf020_scenario_passes():
-    run = _behave("@RF020", None)
+@pytest.mark.parametrize("tag", ["@RF020", "@RF030"])
+def test_the_quiet_store_and_the_late_update_scenarios_pass(tag):
+    run = _behave(tag, None)
     assert run.returncode == 0 and "1 scenario passed" in run.stdout, run.stdout
+
+
+def test_a_store_with_updates_in_the_quiet_period_fails_with_a_plain_message(tmp_path):
+    import importlib.util
+    import types
+    spec = importlib.util.spec_from_file_location("l19_steps", ROOT / "features" / "steps" / "steps.py")
+    S = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(S)
+    final = {"2026-10-31T09:40:00Z": {"north": {"count": 2, "avg_price": 6.95}, "centre": {"count": 0, "avg_price": None}}}
+    with pytest.raises(AssertionError, match="store north between 09:40 and 09:45: expected no update and no price, "
+                                             "actual 2 updates and the price 6.95"):
+        S.step_quiet_shown(types.SimpleNamespace(final=final), "09:40", "09:45")

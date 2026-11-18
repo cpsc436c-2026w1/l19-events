@@ -9,9 +9,14 @@ Feature: Constraints on the price updates
   @RF010
   Scenario: A price update delivered twice is counted once
     Given the simulator delivers 4 of the updates a second time
-    Then window 09:25 has the simulator's truth count for every store
+    Then the updates counted for every store between 09:25 and 09:30 equal the simulator's truth
 
   @RF020
+  Scenario: A store that sends no update is shown as quiet, not with its last price
+    Given the simulator does not send an update from 09:40 to 09:50
+    Then between 09:40 and 09:50 every store is shown with no update and no price
+
+  @RF030
   Scenario: A late update counts in the window of its event time
     Given the simulator holds the updates of store centre from 09:10 to 09:16
-    Then window 09:10 has the simulator's truth count for every store
+    Then the updates counted for every store between 09:10 and 09:15 equal the simulator's truth

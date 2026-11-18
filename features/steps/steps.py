@@ -3,6 +3,7 @@ When steps call the Lambda-shaped handlers; the Then steps compare typed results
 the drafter run on stub models, and the eval runs live only when L19_LIVE=1."""
 import json
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from behave import given, then, when
@@ -77,14 +78,36 @@ def step_window_count(context, hhmm, n, store):
     assert _cell(context, hhmm, store)["count"] == n, _cell(context, hhmm, store)
 
 
-@then("window {hhmm} has the simulator's truth count for every store")
-def step_window_truth(context, hhmm):
-    start = f"{DAY}T{hhmm}:00Z"
-    correct = next(w["correct"] for w in context.truth["windows"] if w["start"] == start)
-    wrong = [f"store {store}: expected count {want['count']} (the simulator's truth), "
-             f"actual count {context.final[start][store]['count']}"
-             for store, want in correct.items() if context.final[start][store]["count"] != want["count"]]
-    assert not wrong, f"window {hhmm}, " + "; ".join(wrong)
+def _starts(a: str, b: str) -> list[str]:
+    """The starts of the stored 5-minute periods from a to b (HH:MM), b not included."""
+    first, last = (stream_window._parse(f"{DAY}T{t}:00Z") for t in (a, b))
+    n = int((last - first).total_seconds()) // stream_window.WINDOW_S
+    assert n >= 1 and first + timedelta(seconds=n * stream_window.WINDOW_S) == last, f"{a} to {b} is not 5-minute periods"
+    return [stream_window._iso(first + timedelta(seconds=i * stream_window.WINDOW_S)) for i in range(n)]
+
+
+def _span(start: str) -> str:
+    end = stream_window._parse(start) + timedelta(seconds=stream_window.WINDOW_S)
+    return f"between {start[11:16]} and {end:%H:%M}"
+
+
+@then("the updates counted for every store between {a} and {b} equal the simulator's truth")
+def step_counted_truth(context, a, b):
+    truth = {w["start"]: w["correct"] for w in context.truth["windows"]}
+    wrong = [f"updates counted for store {store} {_span(start)}: expected {want['count']}, "
+             f"actual {context.final[start][store]['count']}"
+             for start in _starts(a, b) for store, want in truth[start].items()
+             if context.final[start][store]["count"] != want["count"]]
+    assert not wrong, "; ".join(wrong)
+
+
+@then("between {a} and {b} every store is shown with no update and no price")
+def step_quiet_shown(context, a, b):
+    wrong = [f"store {store} {_span(start)}: expected no update and no price, "
+             f"actual {v['count']} updates and the price {v['avg_price']}"
+             for start in _starts(a, b) for store, v in context.final[start].items()
+             if v["count"] != 0 or v["avg_price"] is not None]
+    assert not wrong, "; ".join(wrong)
 
 
 @then("every window has the count and the average of the simulator's truth")

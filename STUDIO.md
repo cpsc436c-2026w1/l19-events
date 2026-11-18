@@ -25,52 +25,60 @@ uv run behave --tags=@RF010
 
 You should see `1 scenario passed, 0 failed`.
 
-## 2. Predict, then run without the dedupe
+## 2. Predict, then run without the duplicate check
 
-The window function skips a record whose `eventID` it has already seen (`stream_window.py`, `handler`).
-`L19_DEDUPE=off` turns that check off for one run. Before you run it, pick one with your pair:
+The function that counts the updates skips a record whose `eventID` it has already seen (`stream_window.py`,
+`handler`). `L19_DEDUPE=off` turns that check off for one run. Before you run it, pick one with your pair:
 
 1. The scenario still passes: the stream delivers each record once, so the check never matters.
-2. The scenario fails, and store `online` counts 8 in window 09:25: each of the 4 updates is counted twice.
-3. The scenario fails, and the window counts more than the truth for some store, but not 4 more for one store.
+2. The scenario fails, and store `online` counts 8 between 09:25 and 09:30: each of the 4 updates is counted twice.
+3. The scenario fails, and some store counts more than the truth, but no store counts 4 more.
 
 ```
 L19_DEDUPE=off uv run behave --tags=@RF010
 ```
 
-You should see `0 scenarios passed, 1 failed` and the window, the store, and the expected and actual counts:
+You should see `0 scenarios passed, 1 failed`, with the store, the time and the expected and actual counts:
 
 ```
-ASSERT FAILED: window 09:25, store centre: expected count 1 (the simulator's truth), actual count 2; store online: expected count 4 (the simulator's truth), actual count 7
+ASSERT FAILED: updates counted for store centre between 09:25 and 09:30: expected 1, actual 2; updates counted for store online between 09:25 and 09:30: expected 4, actual 7
 ```
 
-Option 3 is right. Three of the 4 redelivered updates are from store `online` and one is from store `centre`.
-The scenario compares every store in the window with the simulator's truth, so it names both stores.
+Option 3 is right. Three of the 4 updates delivered twice are from store `online` and one is from store `centre`.
+The scenario compares every store with the simulator's truth, so it names both stores.
 Without the variable, the check is on again.
 
-## 3. Adapt it to a late update
+## 3. Adapt it to a store that goes quiet
 
-> RF020. An update that arrives after its window closed must still count in the window of its event time.
+> RF020. When a store sends no update for 10 minutes, the dashboard must say so instead of showing the last price
+> as current.
+
+The simulator already has the planted case for it, `quiet-windows`: from 09:40 to 09:50 no store sends an update.
 
 1. Copy the RF010 scenario to the end of `features/js01_constraints.feature` and tag the copy `@RF020`.
-2. Change its `Given` to the planted case `late-update`. The step's wording is in the `@R030` scenario of
+2. Change its `Given` to the planted case. The step's wording is in the `@R060` scenario of
    `features/js01_price_updates.feature`.
-3. Change the window in its `Then` to the window in which the held updates were observed, also in that scenario.
+3. Change its `Then` to
+
+   ```
+   Then between 09:40 and 09:50 every store is shown with no update and no price
+   ```
+
 4. Run it:
 
 ```
 uv run behave --tags=@RF020
 ```
 
-Our version is the last scenario of the file, so you should see `2 scenarios passed, 0 failed`: yours and ours.
+Our version is already in the file, so you should see `2 scenarios passed, 0 failed`: yours and ours.
 Then check that every tag names something and every RF has a scenario:
 
 ```
 uv run python check_traceability.py
 ```
 
-You should see the lines `constraints: 2 RF, 3 scenarios  RF010:1 RF020:2` and `requests: 1 RQ, read, not run  RQ010`,
-and no line starting with `PROBLEM`.
+You should see the lines `constraints: 3 RF, 4 scenarios  RF010:1 RF020:2 RF030:1` and
+`requests: 1 RQ, read, not run  RQ010`, and no line starting with `PROBLEM`.
 
 ## Your own
 
@@ -80,3 +88,8 @@ Take one RF from your feedback issue. In your project:
 2. Name the planted case your simulator needs to show it: what the simulator sends, and what the right answer is.
 3. Write its scenario with the tag (`@RF010`), the planted case in its `Given` and the expected number in its `Then`.
 4. Run it with `uv run behave --tags=@RF010`, using your own code.
+
+## For staff
+
+`@RF030` (a late update counts in the window of its event time, planted case `late-update`) is in the same feature
+file for the Nov 24 lecture, which teaches windows. It is not part of the studio.
