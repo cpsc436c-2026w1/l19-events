@@ -94,8 +94,9 @@ No code yet.
 1. List it. In `docs/requirements.md`, add the RF with its code and its wording from your issue.
 2. Describe the planted case in `docs/simulation.md`: its name, what it puts in the data, how often, and which
    scenario uses it.
-3. Write the scenario in `features/<story>.feature`: the story's tag (`@JS01`) above `Feature:`, the RF's tag
-   (`@RF010`) above `Scenario:`, the planted case in the `Given`, a number in the `Then`.
+3. Write the scenario. If the story does not have an id, give it one (`JS01`) in `docs/proposal.md` first. Then, in
+   `features/<story>.feature`, put the story's tag (`@JS01`) above `Feature:`, the RF's tag (`@RF010`) above
+   `Scenario:`, the planted case in the `Given`, a number in the `Then`.
 4. Create the folder `features/steps/` with an empty file, so that git keeps it. behave looks for the folder even
    on a dry run. Then run the dry run at the root of your repository:
 

@@ -88,10 +88,15 @@ The scenarios are in `features/js01_constraints.feature`.
 
 | Story | Feature | Requirements | Scenarios | Of them on a stub model | Eval |
 |---|---|---|---|---|---|
-| JS01 | `features/js01_price_updates.feature` | 9 | 13 | 0 | 0 |
-| JS02 | `features/js02_export_files.feature`, `features/js02_eval.feature` | 8 | 18 | 6 | 1 |
+| JS01 | `features/js01_price_updates.feature`, `features/js01_live.feature` | 9 | 14 | 0 | 0 |
+| JS02 | `features/js02_export_files.feature`, `features/js02_eval.feature`, `features/js02_live.feature` | 8 | 19 | 6 | 1 |
 | JS03 | `features/js03_catalog_changes.feature` | 7 | 11 | 3 | 0 |
-| JS04 | `features/js04_latest_price.feature` | 3 | 3 | 0 | 0 |
+| JS04 | `features/js04_latest_price.feature`, `features/js04_live.feature` | 4 | 7 | 0 | 0 |
+| Constraints | `features/js01_constraints.feature` | 3 RF | 3 | 0 | 0 |
+
+The counts are those that `uv run python check_traceability.py` prints. A row of an `Examples` table counts as one
+scenario, and a scenario tagged with two requirements counts once for each. The scenarios in the `_live` features
+call AWS and are skipped by `uv run behave`.
 
 A requirement that code settles has a fixed answer, so a behave scenario with the planted case in `Given` tests it.
 JS02 R060 is served by an agent, whose answer can differ between runs. Scenarios with a stub model test what does
