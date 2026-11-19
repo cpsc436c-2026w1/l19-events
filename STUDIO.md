@@ -10,7 +10,7 @@ Work in pairs within your team. Set up once:
 uv sync
 ```
 
-## 1. Run ours
+## 1. Run the course's scenario for RF010
 
 The constraint, as it is listed in `docs/requirements.md` (section "Constraints and requests"):
 
@@ -25,7 +25,7 @@ uv run behave --tags=@RF010
 
 You should see `1 scenario passed, 0 failed`.
 
-## 2. Predict, then run without the duplicate check
+## 2. Predict, then run it without the duplicate check
 
 The function that counts the updates skips a record whose `eventID` it has already seen (`stream_window.py`,
 `handler`). `L19_DEDUPE=off` turns that check off for one run. Before you run it, pick one with your pair:
@@ -49,7 +49,7 @@ Option 2: the counts are higher than the truth. Three of the 4 updates delivered
 and both numbers, because the `Then` compares with a known answer.
 Run `uv run behave --tags=@RF010` once more: without the variable, the check is on again and the scenario passes.
 
-## 3. Adapt it to a store that goes quiet
+## 3. Change it to test a store that goes quiet (RF020)
 
 > RF020. When a store sends no update for 10 minutes, the dashboard must say so instead of showing the last price
 > as current.
@@ -76,7 +76,7 @@ The simulator already injects the fault for it: from 09:40 to 09:50 no store sen
 uv run behave --tags=@RF020
 ```
 
-Our own RF020 scenario is already in the file, above yours, so you should see `2 scenarios passed, 0 failed`.
+The file already has the course's RF020 scenario, above your copy, so you should see `2 scenarios passed, 0 failed`.
 Both step texts already have step code, so you write Gherkin only. Then:
 
 ```
@@ -86,7 +86,7 @@ uv run python check_traceability.py
 You should see the lines `constraints: 3 RF, 4 scenarios  RF010:1 RF020:2 RF030:1` and
 `requests: 1 RQ, read, not run  RQ010`, and no line starting with `PROBLEM`.
 
-## 4. Your own
+## 4. Write a scenario for one RF of your team
 
 Take one RF from your team's Feedback 1 issue. Work in your team's repository, in the files you hand in on Monday.
 No code yet.
@@ -122,7 +122,7 @@ git commit -m "RF010 draft scenario"
 ```
 
 An RQ gets its place in `docs/requirements.md` and does not get a scenario. `check_traceability.py` is a demo of
-this repository; you do not copy it into yours.
+this repository; you do not copy it into your team's repository.
 
 ## For staff
 
