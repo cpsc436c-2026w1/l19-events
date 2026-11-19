@@ -96,7 +96,8 @@ def test_requirements_are_one_line_each_with_a_code_used_once():
     for r, code in zip(reqs, codes):
         assert " SHALL " in r and r.endswith(f"· test: `@{code}`"), r    # EARS, and the test is the tagged scenario
         if "|" in r:
-            assert re.search(r"\d", r.split("|")[1]) and "(SLO)" in r, r  # a service level has a number and a status
+            assert re.search(r"\d", r.split("|")[1]), r                   # a constraint has a number
+    assert sum("(SLO)" in r for r in reqs) == 10                         # the service levels carry their status
 
 
 # ---- kind a: price updates ----------------------------------------------------------------------------------

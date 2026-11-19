@@ -1,16 +1,17 @@
 # Requirements
 
 <!-- The course format (the project starter's docs/requirements.md): one line per requirement, in EARS order. After
-`|`, a constraint with a number, when the requirement has a service level. Then its test. Ids go by tens and are
+`|`, a constraint with a number, when the requirement has one. Then its test. Ids go by tens and are
 used once in the whole file (R010, R020 ...), also across job stories; a line inserted later takes R021. -->
 
 Each job story is a heading, with the requirements that serve it under it. A job story becomes one feature in
 `features/`, tagged with the story's id (`@JS01`). Each requirement becomes at least one scenario tagged with its
-code (`@R010`), so `· test:` names a tag: `uv run behave --tags=R150` runs the scenarios of one requirement.
+code (`@R010`), so `· test:` names a tag: `uv run behave --tags=R110` runs the scenarios of one requirement.
 
-A number after `|` is a service level of the running system, with its status: **SLO** is a target we set for
-ourselves, **SLA** is a level promised to a user, and other numbers are good to have. Every number here is an SLO
-chosen for this demo; the 5 % and 8 % ranges are L18's (`triage/world.py`). The known answer of one simulated run
+A constraint after `|` has a number. A time or a rate that the running system must meet is a service level and
+carries its status: **SLO** is a target we set for ourselves, **SLA** is a level promised to a user, and other
+numbers are good to have. A fixed limit, such as the agent's 12 model calls, does not have a status. Every service
+level here is an SLO chosen for this demo; the 5 % and 8 % ranges are L18's (`triage/world.py`). The known answer of one simulated run
 (4 updates delivered twice, 493 repeated ids) is not a requirement: it is in the scenario's `Then`, and the injected
 fault that produces it is in the scenario's `Given` (an injected fault: a problem the simulator adds to the data on
 purpose, and records, so the test knows the right answer).
@@ -45,7 +46,7 @@ file at night and do not repair `prices_curated` in the morning.
 - **R120** IF a store's file has not arrived by 01:55 THEN THE SYSTEM SHALL alert and name the store · test: `@R120`
 - **R130** IF a store's average price in CAD differs from its 7-day average by more than 8 % THEN THE SYSTEM SHALL hold the file | held before 02:00 (SLO) · test: `@R130`
 - **R140** IF a file's row count differs from the usual by more than 5 % THEN THE SYSTEM SHALL hold the file | held before 02:00 (SLO) · test: `@R140`
-- **R150** IF a held file matches no rule THEN THE SYSTEM SHALL return a cause and a fix from the fixed lists, with the facts it read | at most 10 tool calls and 12 model calls for each file (SLO) · test: `@R150`
+- **R150** IF a held file matches no rule THEN THE SYSTEM SHALL return a cause and a fix from the fixed lists, with the facts it read | at most 10 tool calls and 12 model calls for each file · test: `@R150`
 - **R160** IF a file arrives after the day's job started THEN THE SYSTEM SHALL propose one rerun of that day and wait for approval · test: `@R160`
 - **R170** IF a row of a file does not fit the row model THEN THE SYSTEM SHALL hold the file and name the line and the field · test: `@R170`
 
@@ -57,7 +58,7 @@ new column to have a description within a day, so that I do not write a query ag
 - **R180** WHEN a catalog event names a table THE SYSTEM SHALL store the table's current columns with name and type | within 5 minutes of the event (SLO) · test: `@R180`
 - **R190** IF a column that `curate-prices` reads is missing or has another type THEN THE SYSTEM SHALL block the next run and alert | blocked before 02:00 (SLO) · test: `@R190`
 - **R200** IF a column that the job does not read is removed THEN THE SYSTEM SHALL alert the table's owners and not block the job · test: `@R200`
-- **R210** WHEN a table gets a new column THE SYSTEM SHALL draft a description and keep it as a draft until a person accepts it | at most 255 characters (SLO) · test: `@R210`
+- **R210** WHEN a table gets a new column THE SYSTEM SHALL draft a description and keep it as a draft until a person accepts it | at most 255 characters · test: `@R210`
 - **R220** IF an event arrives twice or out of order THEN THE SYSTEM SHALL end with the catalog's current definition and one alert · test: `@R220`
 - **R230** THE SYSTEM SHALL compare every table with its stored definition once a day | a change without an event is found within 24 hours (SLO) · test: `@R230`
 - **R240** IF an event does not fit the event model THEN THE SYSTEM SHALL refuse it with a reason that names the field · test: `@R240`

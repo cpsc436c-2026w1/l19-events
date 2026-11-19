@@ -186,7 +186,7 @@ The draft is written to `pending/` and waits for a person. Nothing writes to the
 ```
 uv run behave                             # one feature per job story; stub models; the eval scenario on the stub
 uv run behave --tags=JS02                 # one story
-uv run behave --tags=R150                 # one requirement (a code is used once in docs/requirements.md)
+uv run behave --tags=R110                 # one requirement (a code is used once in docs/requirements.md)
 uv run python check_traceability.py       # story -> feature, requirement and RF -> scenario, every tag names something
 uv run python eval_held_file.py           # the eval alone, on the stub; Inspect log under output/eval-stub/
 uv run python gate.py output/eval-stub --threshold 1.0    # exit 1 below the threshold
