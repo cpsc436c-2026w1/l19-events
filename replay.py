@@ -6,7 +6,7 @@ often it arrives gives the same numbers both times. A function that does not ski
 (dedupe=False) has 4 updates too many in its stored numbers, and the replay shows where.
 
     uv run python replay.py                   # the function as built: equal
-    uv run python replay.py --no-dedupe       # the planted variant: the windows that differ
+    uv run python replay.py --no-dedupe       # the variant with the injected fault: the windows that differ
 """
 from __future__ import annotations
 

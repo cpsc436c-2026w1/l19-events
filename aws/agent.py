@@ -1,7 +1,7 @@
 """The agent for a held file on AWS: a bucket, a role, a Lambda function started by S3.
 
     uv run python -m aws.deploy agent-up      # bucket, reference files, role, function, S3 trigger (about 2 min)
-    uv run python -m aws.deploy agent-run     # upload the two planted files; wait for the two results
+    uv run python -m aws.deploy agent-run     # upload the two files with injected faults; wait for the two results
     uv run python -m aws.deploy agent-down    # delete all of it, and check that none remains
 
 What `agent-up` creates, tagged project=l19-events:
@@ -251,7 +251,7 @@ def _result(s3, b: str, store: str) -> dict | None:
 def run(c: dict, region: str, deadline_s: int = 660, poll_s: int = 10, sleep=time.sleep, clock=time.time,
         control_deadline_s: int = 360) -> dict:
     """First a file that code settles: its result must arrive with 0 model calls, which proves the trigger, the
-    key and the write of the result. Only then the two planted files (each starts the function); wait for both."""
+    key and the write of the result. Only then the two files with injected faults (each starts the function); wait for both."""
     account = c["sts"].get_caller_identity()["Account"]
     b, s3 = bucket_name(account, region), c["s3"]
     for store in [s for s, _ in CASES.values()] + [CONTROL[1]]:     # yesterday's answers are not today's
@@ -275,7 +275,7 @@ def run(c: dict, region: str, deadline_s: int = 660, poll_s: int = 10, sleep=tim
     if control is None or control["model_calls"] != 0 or control["decided_by"] != "code":
         return {"waited_s": round(clock() - started), "control": control, "results": {}, "model_calls": 0,
                 "budget": MODEL_CALL_BUDGET, "stopped": "the control file did not come back settled by code; "
-                                                        "the planted files were not uploaded"}
+                                                        "the files with injected faults were not uploaded"}
     for case in CASES:
         objects = case_objects(case)
         for key in sorted(objects):                                  # export-logs/ before prices_raw/: the log is there first
@@ -322,7 +322,7 @@ def run_lines(r: dict, lambda_s: dict[str, float]) -> list[str]:
             lines.append(f"{case}: NO RESULT after {r['waited_s']} s")
             continue
         took = lambda_s.get(x.get("request_id", ""))
-        lines.append(f"{case} ({store}): code {x['code_verdict']}; agent named {x['cause']} (planted {planted}), "
+        lines.append(f"{case} ({store}): code {x['code_verdict']}; agent named {x['cause']} (injected {planted}), "
                      f"verified {x['verified']}, fix {x['fix']}; {x['model_calls']} model calls, {x['tool_calls']} tool "
                      f"calls, {x['seconds']} s in the handler, Lambda duration "
                      f"{f'{took:.1f} s' if took else 'not in the log yet'}{'; stopped: ' + x['stopped'] if x['stopped'] else ''}")

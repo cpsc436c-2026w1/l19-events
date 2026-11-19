@@ -43,7 +43,7 @@ Feature: Price updates of my store
 
   @R070
   Scenario Outline: An update that does not fit the input model is rejected with the field named
-    Given the simulator plants an update with <fault>
+    Given the simulator injects an update with <fault>
     When the counting function receives it
     Then the update is in the rejected list and the reason names the field "<field>"
     And the counting function does not fail
@@ -56,7 +56,7 @@ Feature: Price updates of my store
 
   @R080
   Scenario: One bad record does not stop the other records of its batch (simulated)
-    Given the simulator plants a batch of 8 updates whose sixth lacks a price
+    Given the simulator injects a batch of 8 updates whose sixth lacks a price
     And the counting function does not check its input
     When Lambda delivers the batch, splits it on an error and sends a failed record aside
     Then 7 updates are applied once
@@ -65,7 +65,7 @@ Feature: Price updates of my store
 
   @R080
   Scenario: With the input check the same batch does not fail (simulated)
-    Given the simulator plants a batch of 8 updates whose sixth lacks a price
+    Given the simulator injects a batch of 8 updates whose sixth lacks a price
     When Lambda delivers the batch, splits it on an error and sends a failed record aside
     Then 7 updates are applied once
     And 0 records are in the failure list

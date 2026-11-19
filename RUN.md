@@ -14,7 +14,7 @@ uv run pytest                         # stub models only
 Each prints a few lines. No model calls.
 
 ```
-uv run python inputs.py                    # input models: three planted invalid updates, the field each message names
+uv run python inputs.py                    # input models: three injected invalid updates, the field each message names
 uv run python load.py                      # 50 simulated users query latest prices while updates stream in
 uv run python load.py --handler-delay 4    # a slow handler: answers older than the window, and the report says so
 uv run python failing_batch.py             # one bad record in a batch of 8: split, sent aside, the rest applied once
@@ -73,7 +73,7 @@ calls for one `agent-run`.
 ```
 export COURSE_MCP_TOKEN=...                   # your course token; agent-up puts it in the function's environment
 uv run python -m aws.deploy agent-up          # bucket, reference files, role, function, S3 trigger
-uv run python -m aws.deploy agent-run         # a control file first (0 model calls), then the two planted files
+uv run python -m aws.deploy agent-run         # a control file first (0 model calls), then the two files with injected faults
 uv run python -m aws.deploy agent-down        # delete all of it; the token goes with the function
 ```
 
@@ -166,7 +166,7 @@ state); its typed rows (`WindowResult`, `Correction`, `Rejected`) go to the sink
 
 ```
 uv run python half_file_agent.py                          # stub model: reads five tool results, names partial_file
-uv run python half_file_agent.py --case category-missing  # the other planted cause
+uv run python half_file_agent.py --case category-missing  # the other injected cause
 uv run python half_file_agent.py --model stub-wrong       # names a cause the data does not show: refused, escalate
 uv run python half_file_agent.py --model stub-runaway     # never stops: the limits end it
 uv run python half_file_agent.py --case late-file         # code settles it: 0 model calls

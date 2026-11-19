@@ -256,10 +256,10 @@ def step_tool_error(context):
 
 # ---- JS02: the eval -----------------------------------------------------------------------------------------
 
-@given("the eval of the agent on its planted cases")
+@given("the eval of the agent on its injected faults")
 def step_eval(context):
     context.live = os.environ.get("L19_LIVE") == "1"
-    # stub: every planted cause must be named. live: the threshold is a starting value, to be set from repeated
+    # stub: every injected cause must be named. live: the threshold is a starting value, to be set from repeated
     # runs of unchanged code (L19_LIVE_THRESHOLD).
     context.threshold = float(os.environ.get("L19_LIVE_THRESHOLD", "0.5")) if context.live else 1.0
 
@@ -276,7 +276,7 @@ def step_gate(context):
     assert ok, f"accuracy {acc} is below {context.threshold}"
 
 
-@then("every planted case has a score in the log")
+@then("every injected fault has a score in the log")
 def step_scores(context):
     assert sorted(s.id for s in context.log.samples) == sorted(eval_held_file.CASES)
     assert all("cause_in_code" in s.scores for s in context.log.samples)
@@ -387,7 +387,7 @@ import replay  # noqa: E402
 FAULTS = {"a missing price": 0, "a price as text": 1, "an unknown store": 2}
 
 
-@given("the simulator plants an update with {fault}")
+@given("the simulator injects an update with {fault}")
 def step_invalid(context, fault):
     lines = (EVENTS / "price-updates" / "invalid-records.jsonl").read_text().splitlines()
     context.bad = json.loads(lines[FAULTS[fault]])
@@ -414,7 +414,7 @@ def step_no_raise(context):
     assert context.raised is None and context.out["batchItemFailures"] == []
 
 
-@given("the simulator plants a batch of 8 updates whose sixth lacks a price")
+@given("the simulator injects a batch of 8 updates whose sixth lacks a price")
 def step_failing_batch(context):
     event = json.loads(failing_batch.EVENT.read_text())
     assert len(event["Records"]) == 8 and "price" not in event["Records"][5]["dynamodb"]["NewImage"]
@@ -661,7 +661,7 @@ def step_agent_up(context):
     assert not missing, f"run `uv run python -m aws.deploy agent-up` first; missing: {missing}"
 
 
-@when("the two planted files are uploaded to the raw prefix")
+@when("the two files with injected faults are uploaded to the raw prefix")
 def step_agent_run(context):
     context.agent_run = context.agent.run(context.aws, context.region)
 

@@ -137,11 +137,11 @@ def test_up_run_down_on_moto(c, tmp_path):
     # the run: uploads, then (here) results written by hand, as the function would
     ticks = iter(range(0, 10000, 5))
     r = agent.run(c, REGION, deadline_s=20, control_deadline_s=20, sleep=lambda s: None, clock=lambda: next(ticks))
-    # no function runs on moto: the control file gets no result, so the planted files are not uploaded
+    # no function runs on moto: the control file gets no result, so the files with injected faults are not uploaded
     assert r["results"] == {} and "not uploaded" in r["stopped"] and any("STOPPED" in x for x in agent.run_lines(r, {}))
     keys = [o["Key"] for o in c["s3"].list_objects_v2(Bucket=out["bucket"])["Contents"]]
     assert "prices_raw/day=2026-10-31/online-export.csv" in keys and "prices_raw/day=2026-10-31/centre-export.csv" not in keys
-    # with the control's result there (as the function writes it), the planted files go up
+    # with the control's result there (as the function writes it), the files with injected faults go up
     c["s3"].put_object(Bucket=out["bucket"], Key="results/day=2026-10-31/online.json", Body=json.dumps(
         {"code_verdict": "pass", "decided_by": "code", "model_calls": 0, "event_key": "k"}).encode())
     real_delete = c["s3"].delete_object

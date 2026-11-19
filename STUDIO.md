@@ -1,7 +1,7 @@
 # Studio: a constraint as a tagged scenario
 
 A constraint (RF010, RF020 ...) in your feedback is a property of the running system that a test can pass or fail.
-Here it becomes a behave scenario tagged with its code, with the planted case from the simulator in its `Given`.
+Here it becomes a behave scenario tagged with its code, with an injected fault in its `Given` (a problem the simulator adds to the data on purpose, and records, so the test knows the right answer).
 A request (RQ010 ...) is something you write and show; a request does not get a scenario.
 
 Work in pairs within your team. Set up once:
@@ -16,7 +16,7 @@ The constraint, as it is listed in `STORIES.md` (section "Constraints and reques
 
 > RF010. Every price update must be counted exactly once, even when the stream delivers it twice.
 
-Its scenario is the first one in `features/js01_constraints.feature`. The planted case `redelivered-update` makes the
+Its scenario is the first one in `features/js01_constraints.feature`. The injected fault `redelivered-update` makes the
 simulator deliver 4 of the hour's updates a second time.
 
 ```
@@ -54,11 +54,11 @@ Run `uv run behave --tags=@RF010` once more: without the variable, the check is 
 > RF020. When a store sends no update for 10 minutes, the dashboard must say so instead of showing the last price
 > as current.
 
-The simulator already has the planted case for it: from 09:40 to 09:50 no store sends an update.
+The simulator already injects the fault for it: from 09:40 to 09:50 no store sends an update.
 
 1. Copy the RF010 scenario to the end of `features/js01_constraints.feature`.
 2. Tag the copy `@RF020` and give it a name of its own.
-3. Change its `Given` to the planted case:
+3. Change its `Given` to the injected fault:
 
    ```
    Given the simulator does not send an update from 09:40 to 09:50
@@ -92,11 +92,11 @@ Take one RF from your team's Feedback 1 issue. Work in your team's repository, i
 No code yet.
 
 1. List it. In `docs/requirements.md`, add the RF with its code and its wording from your issue.
-2. Describe the planted case in `docs/simulation.md`: its name, what it puts in the data, how often, and which
+2. Describe the injected fault in `docs/simulation.md`: its name, what it puts in the data, how often, and which
    scenario uses it.
 3. Write the scenario. If the story does not have an id, give it one (`JS01`) in `docs/proposal.md` first. Then, in
    `features/<story>.feature`, put the story's tag (`@JS01`) above `Feature:`, the RF's tag (`@RF010`) above
-   `Scenario:`, the planted case in the `Given`, a number in the `Then`.
+   `Scenario:`, the injected fault in the `Given`, a number in the `Then`.
 4. Create the folder `features/steps/` with an empty file, so that git keeps it. behave looks for the folder even
    on a dry run. Then run the dry run at the root of your repository:
 
@@ -126,5 +126,5 @@ this repository; you do not copy it into yours.
 
 ## For staff
 
-`@RF030` (planted case `late-update`) is in the same feature file for the Nov 24 lecture. It is not part of the
+`@RF030` (injected fault `late-update`) is in the same feature file for the Nov 24 lecture. It is not part of the
 studio.

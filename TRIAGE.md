@@ -80,7 +80,7 @@ Lens: 22 cases run on every row or run and 1 once at build time. No case sits un
 is waiting for a reply). No case sits under every build: that column holds the tests, run before a merge (the behave
 scenarios in `features/`, and the eval of the agent with `gate.py`).
 
-One more agent trigger does not have a planted case of its own: a batch file that fails a check and matches none of the
+One more agent trigger does not have an injected fault of its own (an injected fault: a problem the simulator adds to the data on purpose, and records, so the test knows the right answer): a batch file that fails a check and matches none of the
 rules above. `half-file` and `category-missing` are two examples of it.
 
 ## Model cases: what each reads and returns
@@ -96,11 +96,11 @@ rules above. `half-file` and `category-missing` are two examples of it.
 | Limits in code | 12 model calls, 10 tool calls, 300 s, in a Strands hook | 3 model calls for one column |
 
 `partial_file` and `category_missing` are in the fixed list because a person on call would name them ("the file
-is cut off", "the export dropped a category"). The two planted cases have different causes, so an agent that
+is cut off", "the export dropped a category"). The two injected faults have different causes, so an agent that
 always names the same cause is right on one of two. `new-column` keeps the verdict "agent" in the table above
 although it is built as one checked model call: the real split is 20 code, 2 agent cases, 1 checked model call.
 
-Two live evals on the course LLM gateway, 2026-11-17, `qwen3.8-27b`, both planted cases, cause scored in code:
+Two live evals on the course LLM gateway, 2026-11-17, `qwen3.8-27b`, both injected faults, cause scored in code:
 
 | Run | Tools returned | Limits | `half-file` | `category-missing` | Model calls |
 |---|---|---|---|---|---|
@@ -127,7 +127,7 @@ such file is settled without a model call. That is how the runbook grows: a case
    a file, and about one observation in five is normally there twice, so the rule here tests repeated `obs_id`,
    not repeated product, store and day.
 3. **Prices not converted.** L18's `currency_not_converted` is a missing job argument; nothing is converted when a
-   file arrives. The planted file has the wrong currency label instead. Both give the same ratio of 1/1.55 after
+   file arrives. The file with the injected fault has the wrong currency label instead. Both give the same ratio of 1/1.55 after
    the job, and `verify()` cannot tell them apart.
 4. **When the tools have something to read.** L18's runbook and three of its six tools (`get_job_runs`, `get_run_log`,
    `average_price`) read job runs, logs and `prices_curated`, which exist after the job. A handler on the file's

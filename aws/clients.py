@@ -25,7 +25,7 @@ def put_update(ddb, table: str, product_code: str, store: str, price: float | No
                if_newer: bool = False) -> bool:
     """Write one price update. With if_newer the write is conditional: it replaces the item only when the item
     is not there or holds an older observed_at (DynamoDB developer guide, "Condition expressions"). Returns False
-    when the condition failed. price=None leaves the price out: the planted bad record of the batch run."""
+    when the condition failed. price=None leaves the price out: the injected bad record of the batch run."""
     item = {"product_code": {"S": product_code}, "store": {"S": store}, "currency": {"S": "CAD"},
             "observed_at": {"S": observed_at}, "update_id": {"S": update_id}}
     if price is not None:

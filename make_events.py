@@ -1,4 +1,4 @@
-"""Generate the L19 event examples: three kinds of events on the grocery-price case of L18, with planted cases.
+"""Generate the L19 event examples: three kinds of events on the grocery-price case of L18, with injected faults.
 
     uv run python make_events.py            # writes events/ (the same bytes on every run)
     uv run pytest                           # determinism and shape tests
@@ -555,14 +555,17 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 
 ## Cases
 
-| Case | Kind | Normal or planted | What is in it | Where |
+An injected fault: a problem the simulator adds to the data on purpose, and records, so the test knows the right
+answer. Every case below except the normal ones is an injected fault.
+
+| Case | Kind | Normal or injected fault | What is in it | Where |
 |---|---|---|---|---|
 {rows}
 
 ## Files
 
 - `price-updates/records.jsonl`: {delivered} records in the order a Lambda function receives them, for the hour from
-  09:00 to 10:00 UTC on {day}; the stream holds {in_stream} of them. `truth.json` names the planted records by
+  09:00 to 10:00 UTC on {day}; the stream holds {in_stream} of them. `truth.json` names the records of each injected fault by
   `eventID` and gives, for each window of 5 minutes and each store, the correct count and average and the ones a
   function gets if it trusts the delivery. `window-event.json` is one invocation as Lambda sends it with a tumbling
   window.
@@ -610,10 +613,10 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 
 
 def write_readme(cases: list[dict], truth: dict) -> None:
-    where = {"price-updates": "`price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids`",
+    where = {"price-updates": "`price-updates/records.jsonl`; record ids in `truth.json`",
              "invalid-update": "`price-updates/invalid-records.jsonl`", "failing-batch": "`price-updates/failing-batch.json`",
              "batch-files": "`batch-files/{id}/`", "catalog-changes": "`catalog-changes/{id}/`"}
-    rows = "\n".join(f"| `{c['id']}` | {c['kind']} | {'planted' if c['planted'] else 'normal'} | {c['what']} | "
+    rows = "\n".join(f"| `{c['id']}` | {c['kind']} | {'injected fault' if c['planted'] else 'normal'} | {c['what']} | "
                      f"{where.get(c['id'], where[c['kind']]).format(id=c['id'])} |" for c in cases)
     n = lambda k: sum(c["kind"] == k for c in cases)   # noqa: E731
     (OUT / "README.md").write_text(README_HEAD.format(
@@ -640,4 +643,4 @@ def main(out: Path = OUT) -> list[dict]:
 
 if __name__ == "__main__":
     for c in main():
-        print(f"{c['kind']:16} {c['id']:20} {'planted' if c['planted'] else 'normal'}")
+        print(f"{c['kind']:16} {c['id']:20} {'injected fault' if c['planted'] else 'normal'}")

@@ -3,7 +3,7 @@
 A handler parses its input with one of these before it does anything else. Input that does not fit fails here,
 at the boundary, with a message that names the field, and not three steps later as a KeyError or a wrong average.
 
-    uv run python inputs.py            # the three planted invalid price updates, and what each message says
+    uv run python inputs.py            # the three injected invalid price updates, and what each message says
 """
 from __future__ import annotations
 

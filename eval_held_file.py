@@ -1,7 +1,7 @@
-"""Eval of the agent for a held file: does it name the cause planted in each case?
+"""Eval of the agent for a held file: does it name the cause injected in each case?
 
-An Inspect task with one sample per planted case. The solver runs the whole path of half_file_agent.triage (code
-first, the agent, verify); the scorer compares the named cause with the planted one in code: no model judges.
+An Inspect task with one sample per injected fault. The solver runs the whole path of half_file_agent.triage (code
+first, the agent, verify); the scorer compares the named cause with the injected one in code: no model judges.
 The agent's own model is the stub by default and the course LLM gateway on opt-in; Inspect's model is the
 built-in mock, which is never called.
 
@@ -26,7 +26,7 @@ import half_file_agent
 from local import LocalLake, object_key
 
 ROOT = Path(__file__).parent
-# case -> (store whose file is held, the planted cause)
+# case -> (store whose file is held, the injected cause)
 CASES = {"half-file": ("centre", "partial_file"), "category-missing": ("north", "category_missing")}
 LIVE_BUDGET = 16                   # model calls for one live run, over both cases
 USED = {"model_calls": 0}          # counted across the cases of one run
@@ -60,7 +60,7 @@ def held_file_triage(kind: str, model_id: str):
 
 @scorer(metrics=[accuracy()])
 def cause_in_code():
-    """Correct when the named cause is the planted one. `verified` (verify's answer) is kept beside it."""
+    """Correct when the named cause is the injected one. `verified` (verify's answer) is kept beside it."""
     async def score(state: TaskState, target: Target) -> Score:
         r = state.metadata["run"]["result"]
         return Score(value=CORRECT if r["cause"] == target.text else INCORRECT, answer=str(r["cause"]),
@@ -94,6 +94,6 @@ if __name__ == "__main__":
         sc = s.scores["cause_in_code"]
         calls += sc.metadata["model_calls"]
         print(f"{s.metadata['run']['seconds']:4d} s ", end="")
-        print(f"{s.id:17} planted={s.target:17} named={sc.answer:17} {'correct' if sc.value == CORRECT else 'wrong':8} {sc.explanation}")
+        print(f"{s.id:17} injected={s.target:16} named={sc.answer:17} {'correct' if sc.value == CORRECT else 'wrong':8} {sc.explanation}")
     print(f"accuracy {log.results.scores[0].metrics['accuracy'].value:.2f}; model calls {calls}"
           f"{f' of {LIVE_BUDGET}' if live else ' (stub)'}; log {Path(log.location).relative_to(ROOT)}")

@@ -16,36 +16,39 @@ L18's `data/products.jsonl` (code and price_usd). The columns the job reads are 
 
 ## Cases
 
-| Case | Kind | Normal or planted | What is in it | Where |
+An injected fault: a problem the simulator adds to the data on purpose, and records, so the test knows the right
+answer. Every case below except the normal ones is an injected fault.
+
+| Case | Kind | Normal or injected fault | What is in it | Where |
 |---|---|---|---|---|
-| `normal-update` | price-updates | normal | 133 updates written within 3 s of the price change (3 of them a product new to store online). | `price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids` |
-| `redelivered-update` | price-updates | planted | 4 records delivered a second time: same eventID and SequenceNumber. | `price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids` |
-| `late-update` | price-updates | planted | 4 updates of store centre observed from 09:10 to 09:15 and written after 09:16, in the next window. | `price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids` |
-| `eur-update` | price-updates | planted | One update of store online with currency EUR and the EUR amount; the table holds CAD. | `price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids` |
-| `store-burst` | price-updates | planted | 120 updates of store north from 09:20:00 to 09:22:00, each price 10 % lower. | `price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids` |
-| `quiet-windows` | price-updates | planted | No update from any store from 09:40 to 09:50: two windows without records. | `price-updates/records.jsonl`; ids in `truth.json` under `planted_event_ids` |
-| `invalid-update` | price-updates | planted | Three records that do not fit the input model: a missing price, a price as text, an unknown store. | `price-updates/invalid-records.jsonl` |
-| `failing-batch` | price-updates | planted | One batch of 8 records for the 09:05 window; the sixth lacks a price, so a function that does not check its input raises on it. | `price-updates/failing-batch.json` |
+| `normal-update` | price-updates | normal | 133 updates written within 3 s of the price change (3 of them a product new to store online). | `price-updates/records.jsonl`; record ids in `truth.json` |
+| `redelivered-update` | price-updates | injected fault | 4 records delivered a second time: same eventID and SequenceNumber. | `price-updates/records.jsonl`; record ids in `truth.json` |
+| `late-update` | price-updates | injected fault | 4 updates of store centre observed from 09:10 to 09:15 and written after 09:16, in the next window. | `price-updates/records.jsonl`; record ids in `truth.json` |
+| `eur-update` | price-updates | injected fault | One update of store online with currency EUR and the EUR amount; the table holds CAD. | `price-updates/records.jsonl`; record ids in `truth.json` |
+| `store-burst` | price-updates | injected fault | 120 updates of store north from 09:20:00 to 09:22:00, each price 10 % lower. | `price-updates/records.jsonl`; record ids in `truth.json` |
+| `quiet-windows` | price-updates | injected fault | No update from any store from 09:40 to 09:50: two windows without records. | `price-updates/records.jsonl`; record ids in `truth.json` |
+| `invalid-update` | price-updates | injected fault | Three records that do not fit the input model: a missing price, a price as text, an unknown store. | `price-updates/invalid-records.jsonl` |
+| `failing-batch` | price-updates | injected fault | One batch of 8 records for the 09:05 window; the sixth lacks a price, so a function that does not check its input raises on it. | `price-updates/failing-batch.json` |
 | `normal-day` | batch-files | normal | Three exports arrive before the job starts; rows and prices are in their usual range. | `batch-files/normal-day/` |
-| `duplicate-rows` | batch-files | planted | Export of store centre holds every row twice: the same obs_id appears two times. | `batch-files/duplicate-rows/` |
-| `missing-store` | batch-files | planted | Export of store online does not arrive: two files, two events. | `batch-files/missing-store/` |
-| `not-converted` | batch-files | planted | Export of store online is labelled CAD, but its prices are the EUR amounts. | `batch-files/not-converted/` |
-| `half-file` | batch-files | planted | Export of store centre stops after half of the products; the file is valid CSV. | `batch-files/half-file/` |
-| `category-missing` | batch-files | planted | Export of store north lacks every product of category noodles; the export's query left them out. | `batch-files/category-missing/` |
-| `late-file` | batch-files | planted | Export of store centre arrives at 03:12:40, after the job started at 02:00:04. | `batch-files/late-file/` |
+| `duplicate-rows` | batch-files | injected fault | Export of store centre holds every row twice: the same obs_id appears two times. | `batch-files/duplicate-rows/` |
+| `missing-store` | batch-files | injected fault | Export of store online does not arrive: two files, two events. | `batch-files/missing-store/` |
+| `not-converted` | batch-files | injected fault | Export of store online is labelled CAD, but its prices are the EUR amounts. | `batch-files/not-converted/` |
+| `half-file` | batch-files | injected fault | Export of store centre stops after half of the products; the file is valid CSV. | `batch-files/half-file/` |
+| `category-missing` | batch-files | injected fault | Export of store north lacks every product of category noodles; the export's query left them out. | `batch-files/category-missing/` |
+| `late-file` | batch-files | injected fault | Export of store centre arrives at 03:12:40, after the job started at 02:00:04. | `batch-files/late-file/` |
 | `new-partition` | catalog-changes | normal | Nightly job writes the first day of November: prices_curated gets partition month=2026-11. | `catalog-changes/new-partition/` |
 | `new-table` | catalog-changes | normal | Table price_window_counts is created in the database. | `catalog-changes/new-table/` |
-| `new-column` | catalog-changes | planted | prices_raw gets column on_promotion (boolean), without a description. | `catalog-changes/new-column/` |
-| `type-change` | catalog-changes | planted | Column price of prices_raw changes from double to string. | `catalog-changes/type-change/` |
-| `renamed-column` | catalog-changes | planted | Column price of prices_raw becomes unit_price (the schema change of L18's triage). | `catalog-changes/renamed-column/` |
-| `dropped-column` | catalog-changes | planted | Column source (the receipt reference) is removed from prices_raw. | `catalog-changes/dropped-column/` |
-| `repeated-event` | catalog-changes | planted | Two changes 40 s apart (a new column, then a type change): the second event arrives first, then the first, then the second again. | `catalog-changes/repeated-event/` |
-| `no-event` | catalog-changes | planted | Column currency of prices_raw is removed and no event arrives. | `catalog-changes/no-event/` |
+| `new-column` | catalog-changes | injected fault | prices_raw gets column on_promotion (boolean), without a description. | `catalog-changes/new-column/` |
+| `type-change` | catalog-changes | injected fault | Column price of prices_raw changes from double to string. | `catalog-changes/type-change/` |
+| `renamed-column` | catalog-changes | injected fault | Column price of prices_raw becomes unit_price (the schema change of L18's triage). | `catalog-changes/renamed-column/` |
+| `dropped-column` | catalog-changes | injected fault | Column source (the receipt reference) is removed from prices_raw. | `catalog-changes/dropped-column/` |
+| `repeated-event` | catalog-changes | injected fault | Two changes 40 s apart (a new column, then a type change): the second event arrives first, then the first, then the second again. | `catalog-changes/repeated-event/` |
+| `no-event` | catalog-changes | injected fault | Column currency of prices_raw is removed and no event arrives. | `catalog-changes/no-event/` |
 
 ## Files
 
 - `price-updates/records.jsonl`: 262 records in the order a Lambda function receives them, for the hour from
-  09:00 to 10:00 UTC on 2026-10-31; the stream holds 258 of them. `truth.json` names the planted records by
+  09:00 to 10:00 UTC on 2026-10-31; the stream holds 258 of them. `truth.json` names the records of each injected fault by
   `eventID` and gives, for each window of 5 minutes and each store, the correct count and average and the ones a
   function gets if it trusts the delivery. `window-event.json` is one invocation as Lambda sends it with a tumbling
   window.

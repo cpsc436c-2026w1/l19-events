@@ -1,7 +1,7 @@
 @JS01
 Feature: Constraints on the price updates
   The constraints (RF) of the feedback, each a property of the running system that a scenario passes or fails.
-  The planted case of each scenario comes from the simulator's files in events/price-updates/.
+  The injected fault of each scenario comes from the simulator's files in events/price-updates/.
 
   Background:
     Given the simulator delivers one hour of price updates to the counting function

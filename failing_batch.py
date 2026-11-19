@@ -1,6 +1,6 @@
 """One record of a batch makes the function fail: what Lambda does with the batch, simulated locally.
 
-The planted batch (events/price-updates/failing-batch.json) has 8 records for one window; the sixth lacks a price.
+The batch with the injected fault (events/price-updates/failing-batch.json) has 8 records for one window; the sixth lacks a price.
 The function here does not check its input (validate=False), so it raises on that record and the whole
 invocation fails. With these settings on the event source mapping:
 

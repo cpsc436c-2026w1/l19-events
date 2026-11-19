@@ -2,7 +2,7 @@
 
 2026-11-17. Form as in `plans/2026-11-17-l19-stories-to-scenarios.md`:
 a job story becomes one feature, each requirement (one EARS line, R010, R020 ...) becomes at least one tagged
-scenario, and the planted case goes into the scenario's `Given`. The features are in `features/`;
+scenario, and the injected fault goes into the scenario's `Given` (an injected fault: a problem the simulator adds to the data on purpose, and records, so the test knows the right answer). The features are in `features/`;
 `check_traceability.py` fails when a story lacks a feature, a requirement or a constraint lacks a scenario, or a tag does not name a story, a requirement, a constraint or a request (section "Constraints and requests"). Case names are those of `events/manifest.json`.
 The numbers are targets chosen for this demo; the 5 % and 8 % ranges are L18's (`triage/world.py`).
 
@@ -98,10 +98,10 @@ The counts are those that `uv run python check_traceability.py` prints. A row of
 scenario, and a scenario tagged with two requirements counts once for each. The scenarios in the `_live` features
 call AWS and are skipped by `uv run behave`.
 
-A requirement that code settles has a fixed answer, so a behave scenario with the planted case in `Given` tests it.
+A requirement that code settles has a fixed answer, so a behave scenario with the injected fault in `Given` tests it.
 JS02 R060 is served by an agent, whose answer can differ between runs. Scenarios with a stub model test what does
 not vary: its limits (a model that never stops, a cause the data does not show, a tool that refuses a day outside
-its range, a file that code settles). An eval tests what varies: it runs the agent on both planted cases, scores
+its range, a file that code settles). An eval tests what varies: it runs the agent on both injected faults, scores
 the named cause in code, and `gate.py` fails below a threshold. The eval is one tagged scenario; it runs on the
 stub by default and on the course LLM gateway with `L19_LIVE=1`. JS03 R040 is one model call with a check in code:
 its scenarios run on a stub; the wording of a live draft is left to the person who accepts it.
