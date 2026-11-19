@@ -106,9 +106,9 @@ touch features/steps/.gitkeep
 uvx behave --dry-run
 ```
 
-You should see your scenario, each step with `# None`, a code stub for each step, and at the end lines such as
+You should see your scenario, each step with `# None`, then lines such as
 `0 scenarios passed, 0 failed, 1 error, 0 skipped` and `0 steps passed, 0 failed, 0 skipped, 3 undefined` (the
-counts follow your scenarios). For a draft this is the expected result: the scenario is marked as errored and the
+counts follow your scenarios), then a code snippet for each step without code. For a draft this is the expected result: the scenario is marked as errored and the
 command's exit code is 1, because its steps do not have code yet.
 
 A `ParserError` is not expected: behave stops before it lists your scenarios. Fix the line it names and run the dry
