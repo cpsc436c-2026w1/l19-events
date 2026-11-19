@@ -1,16 +1,17 @@
 """Every job story has a feature, every requirement and constraint has a scenario, and every tag names something.
 
-Reads STORIES.md (a heading `## JS01 ...` per job story, a table row `| R010 | ...` per requirement; a team's own
-numbering R10, R20 ... with sub-requirements R11, R21 is read too) and the
-behave features (a feature tagged @JS01, its scenarios tagged @R010). Requirement numbers start again in each
-story, so a scenario's @R tag is read inside its feature's story.
+Reads docs/requirements.md (a heading `## JS01 ...` per job story; under it one line `- **R010** ...` per
+requirement, or a table row `| R010 | ...`) and the behave features (a feature tagged @JS01, its scenarios tagged
+@R010). A requirement code is used once in the whole file, also across job stories: R010, R020 ... by tens, or a
+team's own R10, R20 ... with sub-requirements R11, R21. A code defined twice fails. A scenario's @R tag must name a
+requirement listed under its feature's story.
 
-Constraints and requests (the RF and RQ codes of a feedback issue) are listed in their own section of STORIES.md,
-`## Constraints and requests`, one table row `| RF010 | ...` or `| RQ010 | ...` each. They hold for the whole
-system, so their tags are read across all features. An RF is a property of the running system that a test can pass
-or fail: it needs at least one scenario tagged @RF010. An RQ is written and read, not run: it needs no scenario
-and is listed. A scenario needs an @R or an @RF tag; an @RQ tag may stand beside them. A tag that is not in the
-section fails.
+Constraints and requests (the RF and RQ codes of a feedback issue) are listed in their own section of
+docs/requirements.md, `## Constraints and requests`, one table row `| RF010 | ...` or `| RQ010 | ...` each, each
+kind with its own numbers. They hold for the whole system, so their tags are read across all features. An RF is a
+property of the running system that a test can pass or fail: it needs at least one scenario tagged @RF010. An RQ is
+written and read, not run: it needs no scenario and is listed. A scenario needs an @R or an @RF tag; an @RQ tag may
+stand beside them. A tag that is not in the section fails.
 
     uv run python check_traceability.py          # exit 1 and one line per problem; else a count per story
 """
@@ -21,6 +22,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent
+DOC = "docs/requirements.md"
 OTHER_TAGS = {"eval", "limits", "live"}   # the only tags allowed beside @JSnn, @Rnn0, @RFnn0 and @RQnn0
 SECTION = "## Constraints and requests"
 REQ = r"R0\d{2}|R[1-9]\d+"                # R010, R020 ... or the teams' R10, R11, R20 ...; not R06
@@ -35,9 +37,21 @@ def stories(text: str) -> dict[str, list[str]]:
             out[current] = []
         elif line.startswith("## "):
             current = None
-        elif current and (m := re.match(rf"\| ({REQ}) \|", line)):
+        elif current and (m := re.match(rf"(?:- \*\*|\| )({REQ})(?:\*\*| \|)", line)):
             out[current].append(m.group(1))
     return out
+
+
+def reused(reqs: dict[str, list[str]]) -> list[str]:
+    """One problem for each requirement code defined more than once in the file."""
+    first, problems = {}, []
+    for story, rs in reqs.items():
+        for r in rs:
+            if r in first:
+                problems.append(f"{story} {r}: the code is already defined under {first[r]}; a code is used once in the file")
+            else:
+                first[r] = story
+    return problems
 
 
 def constraints(text: str) -> dict[str, list[str]]:
@@ -64,7 +78,7 @@ def check_constraints(stories_text: str, feats: list[dict]) -> tuple[list[str], 
                     if t in known:
                         known[t] += sc["runs"]
                     else:
-                        problems.append(f"{f['file']}: @{t} on '{sc['name']}' names no constraint or request in STORIES.md")
+                        problems.append(f"{f['file']}: @{t} on '{sc['name']}' names no constraint or request in {DOC}")
     problems += [f"{c}: no scenario is tagged @{c}" for c, n in rf.items() if n == 0]
     return problems, rf, rq
 
@@ -98,7 +112,7 @@ def features(folder: Path) -> list[dict]:
 
 def check(stories_text: str, feats: list[dict]) -> tuple[list[str], dict]:
     reqs = stories(stories_text)
-    problems, covered = [], {s: {r: 0 for r in rs} for s, rs in reqs.items()}
+    problems, covered = reused(reqs), {s: {r: 0 for r in rs} for s, rs in reqs.items()}
     with_feature = set()
     for f in feats:
         js = [t for t in f["tags"] if re.fullmatch(r"JS\d\d", t)]
@@ -107,7 +121,7 @@ def check(stories_text: str, feats: list[dict]) -> tuple[list[str], dict]:
             continue
         story = js[0]
         if story not in reqs:
-            problems.append(f"{f['file']}: @{story} names no job story in STORIES.md")
+            problems.append(f"{f['file']}: @{story} names no job story in {DOC}")
             continue
         with_feature.add(story)
         for name, tags in [(f["file"], f["tags"])] + [(sc["name"], sc["tags"]) for sc in f["scenarios"]]:
@@ -133,12 +147,12 @@ def check(stories_text: str, feats: list[dict]) -> tuple[list[str], dict]:
 
 
 if __name__ == "__main__":
-    problems, covered = check((ROOT / "STORIES.md").read_text(), features(ROOT / "features"))
+    problems, covered = check((ROOT / DOC).read_text(), features(ROOT / "features"))
     for p in problems:
         print("PROBLEM", p)
     for story, rs in covered.items():
         print(f"{story}: {len(rs)} requirements, {sum(rs.values())} scenarios  " + " ".join(f"{r}:{n}" for r, n in rs.items()))
-    _, rf, rq = check_constraints((ROOT / "STORIES.md").read_text(), features(ROOT / "features"))
+    _, rf, rq = check_constraints((ROOT / DOC).read_text(), features(ROOT / "features"))
     if rf:
         print(f"constraints: {len(rf)} RF, {sum(rf.values())} scenarios  " + " ".join(f"{c}:{n}" for c, n in rf.items()))
     if rq:

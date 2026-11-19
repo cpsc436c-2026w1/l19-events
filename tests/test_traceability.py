@@ -6,7 +6,8 @@ import eval_held_file
 import gate
 
 ROOT = Path(__file__).parent.parent
-STORIES = "## JS01 A story\n| R010 | x |\n| R020 | y |\n## JS02 Another\n| R010 | z |\n"
+# codes are used once in the file, also across stories; a requirement is a line `- **R010** ...` or a table row
+STORIES = "## JS01 A story\n- **R010** x\n- **R020** y\n## JS02 Another\n| R030 | z |\n"
 
 
 def _feat(tags, *scenarios):
@@ -14,7 +15,7 @@ def _feat(tags, *scenarios):
 
 
 def test_the_repository_is_traceable():
-    problems, covered = T.check((ROOT / "STORIES.md").read_text(), T.features(ROOT / "features"))
+    problems, covered = T.check((ROOT / "docs/requirements.md").read_text(), T.features(ROOT / "features"))
     assert problems == []
     assert {s: sum(r.values()) for s, r in covered.items()} == {"JS01": 14, "JS02": 19, "JS03": 11, "JS04": 7}
 
@@ -25,19 +26,30 @@ def test_a_story_without_a_feature_fails():
 
 
 def test_a_requirement_without_a_scenario_fails():
-    problems, _ = T.check(STORIES, [_feat(["JS01"], ("a", ["R010"])), _feat(["JS02"], ("c", ["R010"]))])
+    problems, _ = T.check(STORIES, [_feat(["JS01"], ("a", ["R010"])), _feat(["JS02"], ("c", ["R030"]))])
     assert problems == ["JS01 R020: no scenario is tagged @R020"]
 
 
 def test_a_tag_that_names_nothing_fails():
-    feats = [_feat(["JS01"], ("a", ["R010"]), ("b", ["R020"]), ("d", ["R090"])), _feat(["JS02"], ("c", ["R010"])),
-             _feat(["JS07"], ("e", ["R010"])), _feat(["JS02"], ("untagged", []))]
+    feats = [_feat(["JS01"], ("a", ["R010"]), ("b", ["R020"]), ("d", ["R090"])), _feat(["JS02"], ("c", ["R030"])),
+             _feat(["JS07"], ("e", ["R030"])), _feat(["JS02"], ("untagged", []))]
     problems, _ = T.check(STORIES, feats)
     assert len(problems) == 3 and "R090" in problems[0] and "JS07" in problems[1] and "has no @R tag" in problems[2]
 
 
+def test_a_code_defined_under_two_stories_fails():
+    doc = "## JS01 A story\n- **R010** x\n## JS02 Another\n- **R010** z\n"
+    problems, _ = T.check(doc, [_feat(["JS01"], ("a", ["R010"])), _feat(["JS02"], ("c", ["R010"]))])
+    assert problems == ["JS02 R010: the code is already defined under JS01; a code is used once in the file"]
+
+
+def test_a_tag_of_another_story_fails():
+    problems, _ = T.check(STORIES, [_feat(["JS01"], ("a", ["R010"]), ("b", ["R020"])), _feat(["JS02"], ("c", ["R030", "R010"]))])
+    assert problems == ["f.feature: @R010 on 'c' names no requirement of JS02"]
+
+
 def test_a_malformed_tag_fails():
-    feats = [_feat(["JS01"], ("a", ["R010"]), ("b", ["R020", "R06"])), _feat(["JS02", "slow"], ("c", ["R010", "JS01"]))]
+    feats = [_feat(["JS01"], ("a", ["R010"]), ("b", ["R020", "R06"])), _feat(["JS02", "slow"], ("c", ["R030", "JS01"]))]
     problems, _ = T.check(STORIES, feats)
     assert len(problems) == 3 and "R06" in problems[0] and "slow" in problems[1] and "JS01" in problems[2]
 
@@ -69,34 +81,34 @@ def test_constraints_and_requests_are_read_from_their_section():
 
 def test_every_constraint_has_a_scenario_and_a_request_needs_none():
     feats = [_feat(["JS01"], ("a", ["R010", "RF010"]), ("b", ["R020"]), ("c", ["RF020"]), ("d", ["RF020"])),
-             _feat(["JS02"], ("e", ["R010"]))]
+             _feat(["JS02"], ("e", ["R030"]))]
     problems, covered = T.check(STORIES + CONSTRAINTS, feats)
     assert problems == []
     assert T.check_constraints(STORIES + CONSTRAINTS, feats)[1:] == ({"RF010": 1, "RF020": 2}, {"RQ010": 0})
 
 
 def test_a_constraint_without_a_scenario_fails():
-    feats = [_feat(["JS01"], ("a", ["R010", "RF010"]), ("b", ["R020"])), _feat(["JS02"], ("e", ["R010"]))]
+    feats = [_feat(["JS01"], ("a", ["R010", "RF010"]), ("b", ["R020"])), _feat(["JS02"], ("e", ["R030"]))]
     problems, _ = T.check(STORIES + CONSTRAINTS, feats)
     assert problems == ["RF020: no scenario is tagged @RF020"]
 
 
 def test_a_scenario_may_carry_an_rf_tag_instead_of_an_r_tag_and_an_rq_tag_beside_it():
     feats = [_feat(["JS01"], ("a", ["R010"]), ("b", ["R020"]), ("c", ["RF010", "RQ010"]), ("d", ["RF020"])),
-             _feat(["JS02"], ("e", ["R010"]))]
+             _feat(["JS02"], ("e", ["R030"]))]
     assert T.check(STORIES + CONSTRAINTS, feats)[0] == []
 
 
 def test_an_rq_tag_alone_does_not_make_a_scenario_traceable():
     feats = [_feat(["JS01"], ("a", ["R010", "RF010", "RF020"]), ("b", ["R020"]), ("c", ["RQ010"])),
-             _feat(["JS02"], ("e", ["R010"]))]
+             _feat(["JS02"], ("e", ["R030"]))]
     problems, _ = T.check(STORIES + CONSTRAINTS, feats)
     assert problems == ["f.feature: scenario 'c' has no @R tag and no @RF tag"]
 
 
 def test_an_unknown_or_malformed_constraint_tag_fails():
     feats = [_feat(["JS01"], ("a", ["R010", "RF010", "RF020"]), ("b", ["R020", "RF090"]), ("c", ["R010", "RQ020"]),
-                   ("d", ["R010", "RF01"])), _feat(["JS02"], ("e", ["R010"]))]
+                   ("d", ["R010", "RF01"])), _feat(["JS02"], ("e", ["R030"]))]
     problems, _ = T.check(STORIES + CONSTRAINTS, feats)
     assert len(problems) == 3
     assert "RF01" in problems[0] and "RF090" in problems[1] and "RQ020" in problems[2]
@@ -104,14 +116,14 @@ def test_an_unknown_or_malformed_constraint_tag_fails():
 
 
 def test_without_the_section_an_rf_tag_names_nothing():
-    feats = [_feat(["JS01"], ("a", ["R010", "RF010"]), ("b", ["R020"])), _feat(["JS02"], ("e", ["R010"]))]
+    feats = [_feat(["JS01"], ("a", ["R010", "RF010"]), ("b", ["R020"])), _feat(["JS02"], ("e", ["R030"]))]
     problems, _ = T.check(STORIES, feats)
-    assert problems == ["f.feature: @RF010 on 'a' names no constraint or request in STORIES.md"]
+    assert problems == ["f.feature: @RF010 on 'a' names no constraint or request in docs/requirements.md"]
 
 
 
 def test_the_repository_lists_its_constraints_and_requests():
-    rf_problems, rf, rq = T.check_constraints((ROOT / "STORIES.md").read_text(), T.features(ROOT / "features"))
+    rf_problems, rf, rq = T.check_constraints((ROOT / "docs/requirements.md").read_text(), T.features(ROOT / "features"))
     assert rf_problems == [] and rf == {"RF010": 1, "RF020": 1, "RF030": 1} and list(rq) == ["RQ010"]
 
 

@@ -545,7 +545,7 @@ products, the lake tables `prices_raw` and `prices_curated`, the nightly Glue jo
 Prices are illustrative, as in L18; product codes and base prices in `../seed-data/products.csv` are copied from
 L18's `data/products.jsonl` (code and price_usd). The columns the job reads are in `manifest.json` under `job.reads`
 (from the curated SELECT in L18's `storeplan/lake.py`). What should happen for each case, and whether code or an agent does it:
-`../TRIAGE.md`. Job stories and requirements: `../STORIES.md`. The same list for a program: `manifest.json`.
+`../TRIAGE.md`. Job stories and requirements: `../docs/requirements.md`. The same list for a program: `manifest.json`.
 
 | Kind | Folder | One event is | Cases |
 |---|---|---|---|

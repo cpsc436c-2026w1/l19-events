@@ -63,7 +63,7 @@ def test_manifest_counts_and_files(manifest, cases):
     assert sum(not c["planted"] for c in cases.values()) == 4            # one normal case per kind, two for the catalog
 
 
-@pytest.mark.parametrize("doc", ["events/README.md", "TRIAGE.md", "STORIES.md"])
+@pytest.mark.parametrize("doc", ["events/README.md", "TRIAGE.md"])
 def test_documents_name_every_case_and_only_real_cases(doc, cases):
     text = (ROOT / doc).read_text()
     cited = set(re.findall(r"`([a-z]+-[a-z]+)`", text))
@@ -87,17 +87,16 @@ def test_triage_gives_each_case_one_verdict_and_one_lens(cases):
     assert sorted(k for k, v in seen.items() if v == "agent") == ["category-missing", "half-file", "new-column"]
 
 
-def test_stories_map_requirements_to_real_cases(cases):
-    text = (ROOT / "STORIES.md").read_text()
+def test_requirements_are_one_line_each_with_a_code_used_once():
+    text = (ROOT / "docs/requirements.md").read_text()
     assert len(re.findall(r"^## JS\d\d ", text, re.M)) == 4
-    reqs = [r for r in text.splitlines() if re.match(r"\| R\d{3} \|", r)]
-    assert len(reqs) >= 12
-    for r in reqs:
-        assert re.match(r"\| R\d\d0 \|", r), r                           # R010, R020 ...
-        tested_by = set(re.findall(r"`([a-z]+-[a-z]+)`", r.split("|")[-3]))
-        assert tested_by and tested_by <= set(cases), r
-    covered = set(re.findall(r"`([a-z]+-[a-z]+)`", " ".join(reqs)))
-    assert set(cases) <= covered, sorted(set(cases) - covered)
+    reqs = [r for r in text.splitlines() if re.match(r"- \*\*R\d+\*\*", r)]
+    codes = [re.match(r"- \*\*(R\d+)\*\*", r).group(1) for r in reqs]
+    assert codes == [f"R{n:03d}" for n in range(10, 290, 10)]             # R010 ... R280, straight down the file
+    for r, code in zip(reqs, codes):
+        assert " SHALL " in r and r.endswith(f"· test: `@{code}`"), r    # EARS, and the test is the tagged scenario
+        if "|" in r:
+            assert re.search(r"\d", r.split("|")[1]) and "(SLO)" in r, r  # a service level has a number and a status
 
 
 # ---- kind a: price updates ----------------------------------------------------------------------------------

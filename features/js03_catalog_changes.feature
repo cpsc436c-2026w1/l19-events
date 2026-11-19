@@ -4,7 +4,7 @@ Feature: A table I query changes
   new column to have a description within a day, so that I do not write a query against a column whose meaning
   changed.
 
-  @R010
+  @R180
   Scenario Outline: A catalog event is recorded without an alert
     Given the simulator delivers the catalog events of the case "<case>"
     When the catalog watch runs on each event
@@ -16,7 +16,7 @@ Feature: A table I query changes
       | new-table     | price_window_counts |
       | new-partition | prices_curated      |
 
-  @R020
+  @R190
   Scenario Outline: A change to a column the job reads blocks the next run
     Given the simulator delivers the catalog events of the case "<case>"
     When the catalog watch runs on each event
@@ -28,7 +28,7 @@ Feature: A table I query changes
       | renamed-column |
       | type-change    |
 
-  @R030
+  @R200
   Scenario: A removed column that the job does not read alerts the owners only
     Given the simulator delivers the catalog events of the case "dropped-column"
     When the catalog watch runs on each event
@@ -36,7 +36,7 @@ Feature: A table I query changes
     And the actions do not include "block_job"
     And 1 alert is raised
 
-  @R040
+  @R210
   Scenario: A new column gets a draft that waits for a person
     Given the simulator delivers the catalog events of the case "new-column"
     And the drafter's model is the stub "stub"
@@ -45,7 +45,7 @@ Feature: A table I query changes
     And the draft has at most 255 characters and names the type "boolean"
     And the column "on_promotion" does not have a description in the catalog
 
-  @R040
+  @R210
   Scenario: A draft the check rejects is asked for again with the check's feedback
     Given the simulator delivers the catalog events of the case "new-column"
     And the drafter's model is the stub "stub"
@@ -53,7 +53,7 @@ Feature: A table I query changes
     Then the drafter made 2 model calls
     And the second user message carries the check's feedback
 
-  @R040
+  @R210
   Scenario: The drafter stops after two retries
     Given the simulator delivers the catalog events of the case "new-column"
     And the drafter's model is the stub "stub-stubborn"
@@ -61,21 +61,21 @@ Feature: A table I query changes
     Then the drafter made 3 model calls
     And a draft for column "on_promotion" is in the pending folder with status "cannot_describe"
 
-  @R070
+  @R240
   Scenario: An event that does not fit the event model is refused with the field named
     Given the simulator delivers the catalog events of the case "new-column"
     And the first event has the operation "RenameTable"
     When the catalog watch runs on each event
     Then the watch refuses the event and names the field "detail.typeOfChange"
 
-  @R050
+  @R220
   Scenario: Events that arrive twice and out of order end with the current definition
     Given the simulator delivers the catalog events of the case "repeated-event"
     When the catalog watch runs on each event
     Then the stored version of "prices_raw" is 8
     And 1 alert is raised
 
-  @R060
+  @R230
   Scenario: A change without an event is found by the daily check
     Given the simulator delivers the catalog events of the case "no-event"
     When the catalog watch runs on each event

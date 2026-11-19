@@ -12,7 +12,7 @@ uv sync
 
 ## 1. Run ours
 
-The constraint, as it is listed in `STORIES.md` (section "Constraints and requests"):
+The constraint, as it is listed in `docs/requirements.md` (section "Constraints and requests"):
 
 > RF010. Every price update must be counted exactly once, even when the stream delivers it twice.
 

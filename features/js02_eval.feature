@@ -4,7 +4,7 @@ Feature: The agent's causes, checked by an eval
   the agent on every injected fault and scores the named cause in code; the gate fails below a threshold.
   The eval runs on the stub model. Set L19_LIVE=1 to run it on the course LLM gateway (at most 16 model calls).
 
-  @R060
+  @R150
   Scenario: The eval reaches the threshold
     Given the eval of the agent on its injected faults
     When the eval runs

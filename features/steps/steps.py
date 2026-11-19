@@ -541,7 +541,7 @@ def step_report_behind(context):
     assert "the handler is behind" in context.load_report.line()
 
 
-# ---- JS04 R040 offline, and the @live scenarios (AWS) -------------------------------------------------------
+# ---- JS04 R280 offline, and the @live scenarios (AWS) -------------------------------------------------------
 
 import uuid  # noqa: E402
 from datetime import datetime, timezone  # noqa: E402

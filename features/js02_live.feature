@@ -4,7 +4,7 @@ Feature: The night's export files, on AWS
   gateway (at most 24 model calls): run `uv run python -m aws.deploy agent-up` first, then
   `uv run behave --tags=live`, then `uv run python -m aws.deploy agent-down`.
 
-  @R060
+  @R150
   Scenario: A new file in the raw prefix starts the agent, and code checks its cause
     Given the l19 agent resources are up in my AWS account
     When the two files with injected faults are uploaded to the raw prefix
