@@ -22,7 +22,7 @@ lacks a scenario, or a tag does not name a story, a requirement, a constraint or
 ## JS01 Store manager: price updates of my store
 
 When I change shelf prices in my store during the day (about 60 updates an hour, up to 120 in two minutes when a
-promotion starts), I want to see within 5 minutes how many of my updates arrived and their average price, so that I
+promotion starts), I want to see within 5 minutes how many updates my store made in each 5 minutes, even when some arrive late, and their average price, so that I
 know the new prices are in before customers see them.
 
 - **R010** WHEN a 5-minute window ends THE SYSTEM SHALL store one count and one average price for each store (on AWS: one per shard of the stream, added by the reader) | within 60 s of the window's end (SLO) · test: `@R010`
