@@ -1,8 +1,8 @@
 @JS01
 Feature: Price updates of my store
   When I change shelf prices in my store during the day (about 60 updates an hour, up to 120 in two minutes when a
-  promotion starts), I want to see within 5 minutes how many of my updates arrived and their average price, so that
-  I know the new prices are in before customers see them.
+  promotion starts), I want to see within 5 minutes how many updates my store made in each 5 minutes, even when some
+  arrive late, and their average price, so that I know the new prices are in before customers see them.
 
   Background:
     Given the simulator delivers one hour of price updates to the counting function
